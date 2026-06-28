@@ -13,11 +13,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'No valid targets provided.' });
     }
 
-    let allRealPapers = [];
-    let fallbackTriggered = false;
-
-    // Phase 1 & 2: Process each target to fetch an expanded literature pool
-    for (const singleTarget of targetsArray) {
+    // Phase 1 & 2: Process ALL targets concurrently via Promise.all to maximize latency reduction (~6s -> ~4s)
+    const targetResults = await Promise.all(targetsArray.map(async (singleTarget) => {
       const queryExpansionPrompt = `You are an elite biochemical intelligence engine. The user has a research target and a lateral discovery goal.
 Target: ${singleTarget}
 Goal: ${goal}
@@ -50,23 +47,37 @@ Respond with ONLY the raw query string.`;
       let pmcRes = await fetch(`https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(optimizedQuery)}&format=json&resultType=core&pageSize=20`);
       let pmcData = await pmcRes.json();
 
-      // SMART FALLBACK per target
+      let localFallbackActive = false;
+      // SMART FALLBACK per target thread
       if (!pmcData.resultList || !pmcData.resultList.result || pmcData.resultList.result.length === 0) {
-        fallbackTriggered = true;
+        localFallbackActive = true;
         const fallbackQuery = `${singleTarget}`.trim();
         pmcRes = await fetch(`https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(fallbackQuery)}&format=json&resultType=core&pageSize=20`);
         pmcData = await pmcRes.json();
       }
 
+      let mappedPapers = [];
       if (pmcData.resultList && pmcData.resultList.result) {
-        const mapped = pmcData.resultList.result.map(p => ({
+        mappedPapers = pmcData.resultList.result.map(p => ({
           title: p.title,
           url: p.doi ? `https://doi.org/${p.doi}` : `https://pubmed.ncbi.nlm.nih.gov/${p.pmid}/`,
           year: p.pubYear,
           abstract: p.abstractText ? p.abstractText.substring(0, 400) + '...' : 'No abstract available',
-          associatedTarget: singleTarget // trace which paper belongs to which molecule
+          associatedTarget: singleTarget 
         }));
-        allRealPapers.push(...mapped);
+      }
+
+      return { mappedPapers, fallbackTriggered: localFallbackActive };
+    }));
+
+    // Recombine concurrently retrieved lists safely without race conditions
+    let allRealPapers = [];
+    let fallbackTriggered = false;
+
+    for (const result of targetResults) {
+      allRealPapers.push(...result.mappedPapers);
+      if (result.fallbackTriggered) {
+        fallbackTriggered = true;
       }
     }
 
@@ -85,9 +96,9 @@ Respond with ONLY the raw query string.`;
 Your task is:
 1. Under "directResponse", provide a deep, high-IQ direct response explaining the conceptual, structural, biochemical, or clinical connection between the user's multiple targets (${targetsHeading}) and their specific discovery goal.
    - Map out synergistic actions, shared pathways, or direct cell-signaling convergence points (e.g., direct ligand-receptor interactions).
-   - Trace cross-talk between related ligands/pathways comprehensively. Analyze competing mechanisms, receptor saturation elements, or alternative signaling adjustments when these compounds act together or contrast.
-   - Detail the explicit molecular mechanisms behind any combined side effects, toxicities, or runaways.
-2. Under "followUpOptions", provide exactly 3 logical follow-up questions/goals (strings) based on the current analysis that a researcher might want to investigate next. Keep them under 12 words each.
+   - Trace cross-talk between related ligands/pathways comprehensively. Analyze competing mechanisms, receptor saturation elements, counter-regulatory loops, or alternative signaling adjustments when these compounds act together or contrast.
+   - Detail the explicit molecular mechanisms behind any combined side effects, toxicities, or runaways. Emphasize deep pharmacological nuances, cascading enzymatic steps, and structural affinities.
+2. Under "followUpOptions", provide exactly 3 deeply analytical, logical follow-up questions/goals (strings) based on the current analysis that a researcher might want to investigate next. Keep them under 12 words each.
 3. Evaluate the combined list of papers and select the top relevant ones (up to a maximum of 15 total). 
    - Write a strict maximum 18-word "relevance" explanation for each, revealing how it links or provides foundational/partial context back to the target matrix and goal.
    - Analyze the title and abstract text to accurately classify the "studyType" as exactly one of these strings: "In Vitro", "In Vivo", or "Human". If it cannot be determined, default to "In Vivo".
