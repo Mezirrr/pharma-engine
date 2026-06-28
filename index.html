@@ -505,6 +505,17 @@
   .assay-row { flex-direction: column; align-items: stretch; }
   .assay-row .assay-button { width: 100%; text-align: center; }
 }
+
+/* --- Prompt Optimizer Styles --- */
+#assayOptimizeBtn:hover {
+  color: var(--flag-amber) !important;
+}
+#assayOptimizeBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+@keyframes spinSmooth { 100% { transform: rotate(360deg); } }
+.spin-anim { animation: spinSmooth 1s linear infinite; }
 </style>
 </head>
 <body>
@@ -522,10 +533,24 @@
         <label class="assay-label">Target (Separate with commas for matrix comparison)</label>
         <input class="assay-input" id="assayTarget" type="text" placeholder="e.g. HGH, Erdafitinib, Cardarine" />
       </div>
+      
       <div class="assay-field">
         <label class="assay-label">Goal / context</label>
-        <textarea class="assay-textarea" id="assayGoal" rows="2" placeholder="e.g. Processes and pathways affected, role in growth, drug interactions"></textarea>
+        <div style="position: relative;">
+          <textarea class="assay-textarea" id="assayGoal" rows="2" placeholder="e.g. Processes and pathways affected, role in growth, drug interactions" style="padding-right: 40px;"></textarea>
+          
+          <button id="assayOptimizeBtn" title="Optimize prompt" style="position: absolute; bottom: 8px; right: 8px; background: none; border: none; padding: 6px; cursor: pointer; color: var(--ink-faint); transition: color 0.2s ease; display: flex; align-items: center; justify-content: center;">
+            <svg id="optimizeStar" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+            <svg id="optimizeSpinner" class="spin-anim" style="display: none; width: 18px; height: 18px; color: var(--reagent);" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" style="opacity: 0.25;"></circle>
+              <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" style="opacity: 0.75;"></path>
+            </svg>
+          </button>
+        </div>
       </div>
+
       <div class="assay-field">
         <label class="assay-label">Type</label>
         <div class="assay-pills" id="assayPills">
@@ -553,6 +578,7 @@
 (function() {
   const root = document.getElementById('assayRoot');
   if (!root) { console.error('Assay: root container not found.'); return; }
+  
   const targetInput = root.querySelector('#assayTarget');
   const goalInput = root.querySelector('#assayGoal');
   const pills = root.querySelectorAll('.assay-pill');
@@ -560,6 +586,11 @@
   const clearBtn = root.querySelector('#assayClear');
   const statusEl = root.querySelector('#assayStatus');
   const outputEl = root.querySelector('#assayOutput');
+  
+  // New elements for Prompt Optimizer
+  const optimizeBtn = root.querySelector('#assayOptimizeBtn');
+  const optimizeStar = root.querySelector('#optimizeStar');
+  const optimizeSpinner = root.querySelector('#optimizeSpinner');
 
   let selectedType = 'auto';
   let isCooldown = false;
@@ -578,6 +609,50 @@
     goalInput.value = '';
     statusEl.innerHTML = '';
     outputEl.innerHTML = '<div class="assay-empty">No samples queried yet. Enter a target above to pull literature.</div>';
+  });
+
+  // --- PROMPT OPTIMIZATION LOGIC ---
+  optimizeBtn.addEventListener('click', async () => {
+    const prompt = goalInput.value.trim();
+    if (!prompt) {
+      goalInput.focus();
+      goalInput.style.borderColor = 'var(--error)';
+      setTimeout(() => { goalInput.style.borderColor = ''; }, 1200);
+      return;
+    }
+
+    // Lock UI and show spinner
+    optimizeBtn.disabled = true;
+    optimizeStar.style.display = 'none';
+    optimizeSpinner.style.display = 'block';
+
+    try {
+      const response = await fetch('/api/optimize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
+      });
+
+      if (!response.ok) throw new Error('Optimization failed');
+      
+      const data = await response.json();
+      if (data.optimizedPrompt) {
+        // Flash green to show success, inject text
+        goalInput.style.borderColor = 'var(--assay-green)';
+        goalInput.value = data.optimizedPrompt;
+        setTimeout(() => { goalInput.style.borderColor = ''; }, 1200);
+      }
+    } catch (err) {
+      console.error('Optimization error:', err);
+      // Flash red on error
+      goalInput.style.borderColor = 'var(--error)';
+      setTimeout(() => { goalInput.style.borderColor = ''; }, 1200);
+    } finally {
+      // Reset UI
+      optimizeBtn.disabled = false;
+      optimizeStar.style.display = 'block';
+      optimizeSpinner.style.display = 'none';
+    }
   });
 
   [targetInput, goalInput].forEach(el => {
