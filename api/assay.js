@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   const { target, goal, typeLabel } = req.body;
 
   try {
-    // 1. Fetch REAL papers from Europe PMC (PubMed) instead of Semantic Scholar
+    // 1. Fetch REAL papers from Europe PMC (PubMed)
     const searchQuery = `${target} ${goal}`.trim();
     const pmcRes = await fetch(`https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(searchQuery)}&format=json&resultType=core&pageSize=15`);
     const pmcData = await pmcRes.json();
@@ -33,7 +33,7 @@ Respond with ONLY raw JSON matching exactly this schema:
 
     const userPrompt = `Target type: ${typeLabel || 'unspecified'}\nTarget: ${target}\nGoal: ${goal || 'General info'}\n\nHere are the real papers I found:\n${JSON.stringify(realPapers, null, 2)}\n\nFilter and return the JSON.`;
 
-    // Make the request to Google's Gemini API
+    // Make the request to Google's Gemini API with lowered safety filters for medical queries
     const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
       method: 'POST',
       headers: { 
@@ -42,16 +42,26 @@ Respond with ONLY raw JSON matching exactly this schema:
       body: JSON.stringify({
         system_instruction: { parts: [{ text: systemPrompt }] },
         contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+        safetySettings: [
+          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+        ],
         generationConfig: {
-          responseMimeType: "application/json" // Forces Gemini to return perfect JSON
+          responseMimeType: "application/json" 
         }
       })
     });
 
     const geminiData = await geminiRes.json();
     
+    // THIS CATCHES THE EXACT GOOGLE ERROR
+    if (geminiData.error) {
+       console.error("GOOGLE API ERROR:", JSON.stringify(geminiData.error, null, 2));
+       throw new Error(`Google rejected the API key or request: ${geminiData.error.message}`);
+    }
+    
     if (!geminiData.candidates || geminiData.candidates.length === 0) {
-       throw new Error("Gemini did not return a valid response. Check your API key.");
+       console.error("GEMINI BLOCKED RESPONSE:", JSON.stringify(geminiData, null, 2));
+       throw new Error("Gemini returned an empty response. It might have triggered a safety block.");
     }
     
     // Extract and parse the JSON Gemini spits out
