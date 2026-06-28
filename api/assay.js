@@ -1,3 +1,31 @@
+// Smart Fetch Wrapper with Timeout and Retry Logic
+async function fetchWithRetry(url, options = {}, retries = 2, timeoutMs = 5000) {
+  for (let i = 0; i <= retries; i++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    
+    try {
+      const response = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      if (i === retries) {
+        console.warn(`Request failed after ${retries} retries: ${url}`);
+        throw error;
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 500 * (i + 1)));
+    }
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -17,7 +45,6 @@ export default async function handler(req, res) {
     // Phase 1 & 2: Process ALL targets concurrently
     const targetResults = await Promise.all(targetsArray.map(async (singleTarget) => {
       
-      // SMART FIX 2: Native PubMed Syntax
       const queryExpansionPrompt = `You are an elite biochemical intelligence engine. 
 Target: ${singleTarget}
 Goal: ${goal}
@@ -29,7 +56,7 @@ Generate a highly optimized PubMed search query.
 
 Respond with ONLY the raw query string. Do not include quotes or conversational filler.`;
 
-      const expansionRes = await fetch(`https://api.groq.com/openai/v1/chat/completions`, {
+      const expansionRes = await fetchWithRetry(`https://api.groq.com/openai/v1/chat/completions`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -39,7 +66,7 @@ Respond with ONLY the raw query string. Do not include quotes or conversational 
           model: 'openai/gpt-oss-120b', 
           messages: [{ role: 'user', content: queryExpansionPrompt }]
         })
-      });
+      }, 2, 5000);
 
       const expansionData = await expansionRes.json();
       let optimizedQuery = `${singleTarget} ${goal}`.trim();
@@ -48,7 +75,7 @@ Respond with ONLY the raw query string. Do not include quotes or conversational 
       }
 
       // 1. E-Search: Get PMIDs
-      let pubmedRes = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(optimizedQuery)}&retmode=json&retmax=15${ncbiApiKey}`);
+      let pubmedRes = await fetchWithRetry(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(optimizedQuery)}&retmode=json&retmax=15${ncbiApiKey}`, {}, 2, 6000);
       let pubmedData = await pubmedRes.json();
       let pmids = pubmedData.esearchresult?.idlist || [];
 
@@ -58,7 +85,7 @@ Respond with ONLY the raw query string. Do not include quotes or conversational 
       if (pmids.length === 0) {
         localFallbackActive = true;
         const fallbackQuery = `${singleTarget}[Title/Abstract]`.trim();
-        pubmedRes = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(fallbackQuery)}&retmode=json&retmax=15${ncbiApiKey}`);
+        pubmedRes = await fetchWithRetry(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(fallbackQuery)}&retmode=json&retmax=15${ncbiApiKey}`, {}, 2, 6000);
         pubmedData = await pubmedRes.json();
         pmids = pubmedData.esearchresult?.idlist || [];
       }
@@ -67,7 +94,7 @@ Respond with ONLY the raw query string. Do not include quotes or conversational 
       
       // 2. E-Fetch: Get abstracts based on PMIDs
       if (pmids.length > 0) {
-        const fetchRes = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${pmids.join(',')}&retmode=xml${ncbiApiKey}`);
+        const fetchRes = await fetchWithRetry(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${pmids.join(',')}&retmode=xml${ncbiApiKey}`, {}, 2, 6000);
         const xmlText = await fetchRes.text();
 
         const articles = xmlText.split('<PubmedArticle>');
@@ -78,9 +105,7 @@ Respond with ONLY the raw query string. Do not include quotes or conversational 
           const yearMatch = article.match(/<PubDate>[\s\S]*?<Year>(.*?)<\/Year>[\s\S]*?<\/PubDate>/) || article.match(/<MedlineDate>(.*?)<\/MedlineDate>/);
           const pmidMatch = article.match(/<PMID[^>]*>(.*?)<\/PMID>/);
           
-          // SMART FIX 1: Stitch structured abstracts together
           const abstractMatches = [...article.matchAll(/<AbstractText[^>]*>(.*?)<\/AbstractText>/gs)];
-          // Strip any stray internal XML/HTML tags (like <i> or <b>) from the abstract text
           const fullAbstract = abstractMatches.map(m => m[1]).join(' ').replace(/<[^>]*>?/gm, '');
 
           return {
@@ -116,15 +141,17 @@ Respond with ONLY the raw query string. Do not include quotes or conversational 
     // Phase 3: Dynamic Multi-Target Synthesis
     const targetsHeading = targetsArray.join(', ');
     
-    // SMART FIX 3: Hallucination Guardrail
-    const systemPrompt = `You are an elite, highly open-minded scientific research assistant specializing in cross-disciplinary synthesis and non-obvious mechanistic cross-linking.
+    // ADJUSTED FOR 130-IQ PERSONALIZATION
+    const systemPrompt = `You are a 130-IQ, elite biochemical intelligence architecture specializing in cross-disciplinary synthesis and non-obvious mechanistic cross-linking.
 
 Your task is:
-1. Under "directResponse", provide a highly technical, high-IQ synthesis explaining the conceptual, structural, biochemical, or clinical connection between the user's targets (${targetsHeading}) and their discovery goal.
-   - Map out synergistic actions, shared metabolic pathways, or direct ligand-receptor convergence points.
+1. Under "directResponse", provide a hyper-analytical, flawlessly logical 130-IQ synthesis explaining the conceptual, structural, biochemical, or clinical connection between the user's targets (${targetsHeading}) and their discovery goal.
+   - Strike an authoritative, deeply academic, and highly technical tone. Avoid fluff, unnecessary introductory pleasantries, and thesaurus-bloat.
+   - Map out explicit synergistic actions, shared metabolic pathways, or direct ligand-receptor convergence points.
    - Trace cross-talk, competing mechanisms, receptor saturation, and counter-regulatory loops.
+   - Detail the exact molecular mechanisms behind any combined toxicities or emergent pharmacological properties.
    - If the provided papers are irrelevant or empty, state this clearly, but STILL provide your best theoretical analysis based on your internal knowledge base.
-2. Under "followUpOptions", provide exactly 3 deeply analytical follow-up questions (strings) investigating cascading enzymatic steps or structural affinities. Max 12 words each.
+2. Under "followUpOptions", provide exactly 3 deeply analytical, highly insightful follow-up questions (strings) investigating cascading enzymatic steps or structural affinities. Max 12 words each.
 3. Select the top relevant papers (up to 15). 
    - Write a strict max 18-word "relevance" explanation for each, explicitly linking its findings to the target matrix.
    - Classify "studyType" strictly as: "In Vitro", "In Vivo", or "Human". Default to "In Vivo" if ambiguous.
@@ -147,7 +174,7 @@ Respond with ONLY raw JSON matching exactly this schema:
 
     const userPrompt = `Target type: ${typeLabel || 'unspecified'}\nAll Inputs Requested: ${targetsHeading}\nGoal: ${goal || 'General info'}\nIs Fallback Broad Search Active: ${fallbackTriggered}\n\nHere are the real compiled papers found across targets:\n${JSON.stringify(uniquePapers, null, 2)}\n\nFilter and return the JSON.`;
 
-    const groqRes = await fetch(`https://api.groq.com/openai/v1/chat/completions`, {
+    const groqRes = await fetchWithRetry(`https://api.groq.com/openai/v1/chat/completions`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -161,7 +188,7 @@ Respond with ONLY raw JSON matching exactly this schema:
         ],
         response_format: { type: 'json_object' } 
       })
-    });
+    }, 2, 12000);
 
     const groqData = await groqRes.json();
     const text = groqData.choices[0].message.content;
@@ -172,7 +199,9 @@ Respond with ONLY raw JSON matching exactly this schema:
     res.status(200).json(finalJson);
 
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
+    console.error("API Pipeline Error:", error);
+    res.status(500).json({ 
+      error: "The analysis pipeline encountered a network instability or failed after multiple retries. Please try again." 
+    });
   }
 }
