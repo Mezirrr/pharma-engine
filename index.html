@@ -1,13 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Assay - Literature Lookup</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 
 .assay-root {
   --paper: #FAFAF7;
-  --ink: #1B1F1D;
-  --ink-soft: rgba(27,31,29,0.62);
-  --ink-faint: rgba(27,31,29,0.38);
+  --ink: #000000; /* Darkened to pure black */
+  --ink-soft: #333333; /* Darkened for better readability */
+  --ink-faint: #555555;
   --bench: #EFEDE4;
-  --hairline: #D8D4C8;
+  --hairline: #CCCCCC;
   --reagent: #1E5AA8;
   --reagent-soft: rgba(30,90,168,0.10);
   --assay-green: #2F7A4F;
@@ -19,7 +25,7 @@
   background: var(--paper);
   color: var(--ink);
   font-family: 'IBM Plex Sans', sans-serif;
-  min-height: 100%;
+  min-height: 100vh;
   padding: 28px 16px 60px;
   display: flex;
   justify-content: center;
@@ -29,7 +35,7 @@
 
 .assay-container {
   width: 100%;
-  max-width: 680px;
+  max-width: 720px; /* Slightly wider for better organization */
 }
 
 .assay-header { margin-bottom: 22px; }
@@ -61,32 +67,32 @@
 }
 
 .assay-subtitle {
-  font-size: 13.5px;
+  font-size: 14px;
   color: var(--ink-soft);
   line-height: 1.5;
-  max-width: 480px;
+  max-width: 520px;
 }
 
 .assay-panel {
   background: var(--bench);
   border: 1px solid var(--hairline);
   border-radius: 10px;
-  padding: 18px;
-  margin-bottom: 24px;
+  padding: 20px;
+  margin-bottom: 30px;
 }
 
-.assay-field { margin-bottom: 14px; }
+.assay-field { margin-bottom: 16px; }
 .assay-field:last-of-type { margin-bottom: 0; }
 
 .assay-label {
   display: block;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--reagent);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .assay-input, .assay-textarea {
@@ -94,15 +100,15 @@
   background: var(--paper);
   border: 1px solid var(--hairline);
   border-radius: 6px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   font-family: 'IBM Plex Sans', sans-serif;
-  font-size: 14.5px;
+  font-size: 15px;
   color: var(--ink);
   outline: none;
   transition: border-color 0.15s ease;
 }
 
-.assay-input::placeholder, .assay-textarea::placeholder { color: var(--ink-faint); }
+.assay-input::placeholder, .assay-textarea::placeholder { color: #888888; }
 
 .assay-input:focus, .assay-textarea:focus {
   border-color: var(--reagent);
@@ -111,16 +117,16 @@
 
 .assay-pills {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .assay-pill {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 11.5px;
+  font-size: 12px;
   letter-spacing: 0.04em;
-  padding: 6px 11px;
-  border-radius: 5px;
+  padding: 8px 12px;
+  border-radius: 6px;
   border: 1px solid var(--hairline);
   background: var(--paper);
   color: var(--ink-soft);
@@ -134,13 +140,14 @@
   background: var(--reagent);
   border-color: var(--reagent);
   color: var(--paper);
+  font-weight: 600;
 }
 
-.assay-row { display: flex; gap: 14px; align-items: flex-start; margin-top: 16px; flex-wrap: wrap; }
+.assay-row { display: flex; gap: 14px; align-items: flex-start; margin-top: 20px; flex-wrap: wrap; }
 
 .assay-button {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -148,7 +155,7 @@
   color: var(--paper);
   border: none;
   border-radius: 6px;
-  padding: 11px 20px;
+  padding: 12px 24px;
   cursor: pointer;
   transition: opacity 0.15s ease, transform 0.1s ease;
 }
@@ -162,11 +169,11 @@
   color: var(--ink-soft);
   border: 1px solid var(--hairline);
 }
-.assay-button.secondary:hover { border-color: var(--ink-faint); color: var(--ink); opacity: 1; }
+.assay-button.secondary:hover { border-color: var(--ink); color: var(--ink); opacity: 1; }
 
 .assay-status {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--ink-soft);
   margin-bottom: 18px;
   min-height: 18px;
@@ -185,22 +192,23 @@
 @keyframes assayBlink { 50% { opacity: 0; } }
 
 .assay-error {
-  font-size: 13.5px;
+  font-size: 14px;
   color: var(--error);
   background: rgba(178,59,59,0.07);
   border: 1px solid rgba(178,59,59,0.25);
   border-radius: 8px;
-  padding: 12px 14px;
-  margin-bottom: 18px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
   line-height: 1.5;
+  font-weight: 500;
 }
 
 .assay-empty {
-  font-size: 13.5px;
+  font-size: 14px;
   color: var(--ink-faint);
-  border: 1px dashed var(--hairline);
+  border: 2px dashed var(--hairline);
   border-radius: 10px;
-  padding: 28px 18px;
+  padding: 32px 20px;
   text-align: center;
   line-height: 1.6;
 }
@@ -209,52 +217,63 @@
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 10px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 8px;
 }
 
 .assay-resultscount {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 11.5px;
-  color: var(--ink-faint);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .assay-copy {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--reagent);
   background: none;
   border: none;
   cursor: pointer;
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: 3px;
   padding: 0;
+  font-weight: 500;
+}
+
+.assay-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* Better spacing between results */
 }
 
 .assay-entry {
   display: flex;
-  gap: 12px;
-  border-bottom: 1px solid var(--hairline);
-  padding: 14px 2px;
+  gap: 16px;
+  background: #FFFFFF;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
-
-.assay-entry:last-child { border-bottom: none; }
 
 .assay-rail {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-shrink: 0;
-  width: 30px;
-  padding-top: 1px;
+  width: 32px;
 }
 
 .assay-accession {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 11px;
-  color: var(--ink-faint);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
 }
 
 .assay-tab {
@@ -267,49 +286,61 @@
 .assay-body { flex: 1; min-width: 0; }
 
 .assay-entry-title {
-  font-size: 14.5px;
-  font-weight: 600;
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
   color: var(--ink);
   text-decoration: none;
   line-height: 1.4;
+  margin-bottom: 8px;
 }
 
-.assay-entry-title:hover { text-decoration: underline; }
+.assay-entry-title:hover { text-decoration: underline; color: var(--reagent); }
 
 .assay-entry-relevance {
-  font-size: 13px;
-  color: var(--ink-soft);
-  line-height: 1.5;
-  margin: 5px 0 7px;
+  font-size: 14px;
+  color: var(--ink); /* Black text for readability */
+  line-height: 1.6;
+  margin-bottom: 12px;
 }
 
 .assay-entry-meta {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 10.5px;
+  font-size: 11px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  color: var(--ink-soft);
 }
 
 .assay-tag {
   display: inline-block;
-  padding: 2px 7px;
+  padding: 4px 8px;
   border-radius: 4px;
-  margin-right: 7px;
+  margin-right: 10px;
+  font-weight: 600;
 }
 
 .assay-footnote {
-  font-size: 11.5px;
-  color: var(--ink-faint);
-  margin-top: 20px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-top: 24px;
   line-height: 1.5;
+  text-align: center;
 }
 
 @media (max-width: 480px) {
   .assay-title { font-size: 22px; }
   .assay-row { flex-direction: column; align-items: stretch; }
   .assay-row .assay-button { width: 100%; text-align: center; }
+  .assay-entry { flex-direction: column; gap: 12px; }
+  .assay-rail { flex-direction: row; width: 100%; justify-content: flex-start; }
+  .assay-tab { height: 4px; width: 24px; min-height: auto; }
 }
 </style>
+</head>
+<body>
 
 <div class="assay-root" id="assayRoot">
   <div class="assay-container">
@@ -317,7 +348,7 @@
     <div class="assay-header">
       <span class="assay-wordmark"><span class="dot"></span>Assay</span>
       <div class="assay-title">Literature lookup</div>
-      <div class="assay-subtitle">Enter a compound, gene, or pathway and what you're trying to find out. It searches PubMed, Scholar, and relevant specialty databases for studies that actually match.</div>
+      <div class="assay-subtitle">Enter a compound, gene, or pathway and what you're trying to find out. It searches for relevant studies.</div>
     </div>
 
     <div class="assay-panel">
@@ -356,6 +387,7 @@
 (function() {
   const root = document.getElementById('assayRoot');
   if (!root) { console.error('Assay: root container not found.'); return; }
+  
   const targetInput = root.querySelector('#assayTarget');
   const goalInput = root.querySelector('#assayGoal');
   const pills = root.querySelectorAll('.assay-pill');
@@ -363,6 +395,9 @@
   const clearBtn = root.querySelector('#assayClear');
   const statusEl = root.querySelector('#assayStatus');
   const outputEl = root.querySelector('#assayOutput');
+
+  // Replace this with your actual API key for testing, but DO NOT commit this to public GitHub!
+  const ANTHROPIC_API_KEY = 'YOUR_API_KEY_HERE'; 
 
   let selectedType = 'auto';
   let lastResults = [];
@@ -392,7 +427,7 @@
   runBtn.addEventListener('click', run);
 
   const tickerPhrases = [
-    'querying pubmed', 'cross-referencing scholar', 'checking specialty databases',
+    'querying models', 'cross-referencing data', 'checking relevance',
     'reading abstracts', 'scoring relevance', 'logging specimens'
   ];
 
@@ -461,7 +496,7 @@
         </div>`;
     });
 
-    html += '</div><div class="assay-footnote">Links open in a new tab. Always check the original study before relying on it — search results can occasionally miss context.</div>';
+    html += '</div><div class="assay-footnote">Links open in a new tab. Always check the original study before relying on it — AI search results can occasionally miss context.</div>';
     outputEl.innerHTML = html;
 
     root.querySelector('#assayCopyLinks').addEventListener('click', () => {
@@ -478,7 +513,7 @@
   function showError(message, raw) {
     let html = `<div class="assay-error">${escapeHtml(message)}</div>`;
     if (raw) {
-      html += `<div class="assay-empty" style="text-align:left; white-space:pre-wrap; font-family:'IBM Plex Mono',monospace; font-size:11.5px;">${escapeHtml(raw.slice(0, 1500))}</div>`;
+      html += `<div class="assay-empty" style="text-align:left; white-space:pre-wrap; font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#B23B3B;">${escapeHtml(raw.slice(0, 1500))}</div>`;
     }
     outputEl.innerHTML = html;
   }
@@ -500,58 +535,65 @@
     const typeLabel = selectedType === 'auto' ? 'unspecified — infer whether it is a compound, gene, or pathway from the name itself'
       : selectedType;
 
-    const systemPrompt = `You are a scientific literature search assistant working inside a research tool. Use the web search tool to find REAL studies about the given target, evaluated against the stated research goal.
+    // Notice we removed the "web_search" tool mention in the prompt because outside of Claude's sandbox, it doesn't work automatically.
+    const systemPrompt = `You are a scientific literature assistant. Your job is to return a raw JSON list of highly relevant, REAL scientific papers regarding the target and goal. You must rely on your training data to provide the most accurate real studies (PubMed, Scholar, PubChem, etc.). DO NOT invent papers. If you do not know real papers, return an empty array.
 
-Search across PubMed, Google Scholar, and whichever specialty databases fit the target type: PubChem and ChEMBL for compounds; NCBI Gene, GeneCards, and UniProt for genes; KEGG, Reactome, and WikiPathways for pathways; bioRxiv and medRxiv for preprints. Run several distinct searches covering different angles before answering.
-
-Only include results you actually found via search, with real working URLs. Never invent papers, links, authors, or details. If a result's relevance to the stated goal is unclear, leave it out rather than guessing.
-
-Respond with ONLY raw JSON, no markdown fences, no commentary, matching exactly this schema:
+Respond with ONLY raw JSON, matching exactly this schema:
 {"results":[{"title":string,"url":string,"source":string,"year":string|null,"relevance":string}]}
 
-Limit to the 8-10 most relevant results. Each "relevance" string must be under 18 words, written in your own words (never quote the source), explaining how that specific study connects to the goal. Each "source" should be a short label like "PubMed", "Google Scholar", "PubChem", "bioRxiv", etc. If nothing relevant turns up, return {"results":[]}.`;
+Limit to the 8-10 most relevant results. Each "relevance" string must be under 18 words, written in your own words.`;
 
-    const userPrompt = `Target type: ${typeLabel}
-Target: ${target}
-Research goal: ${goal || 'general relevant literature on this target'}
-
-Find the most relevant real studies.`;
+    const userPrompt = `Target type: ${typeLabel}\nTarget: ${target}\nResearch goal: ${goal || 'general relevant literature on this target'}\n\nReturn strictly JSON.`;
 
     try {
+      if (ANTHROPIC_API_KEY === 'YOUR_API_KEY_HERE') {
+        throw new Error("Missing API Key. You must add your Anthropic API key to the code.");
+      }
+
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-api-key': ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerously-allow-browser': 'true' // Required to stop browser CORS blocking
+        },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
+          model: 'claude-3-5-sonnet-20241022', // Updated to an actual valid model name
           max_tokens: 1000,
           system: systemPrompt,
-          messages: [{ role: 'user', content: userPrompt }],
-          tools: [{ type: 'web_search_20250305', name: 'web_search' }]
+          messages: [{ role: 'user', content: userPrompt }]
+          // Removed the hallucinated tool list
         })
       });
 
       if (!response.ok) {
-        throw new Error(`Request failed (${response.status})`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`API Request failed (${response.status}): ${errorData.error?.message || 'Unknown Error'}`);
       }
 
       const data = await response.json();
       const text = (data.content || [])
         .map(block => (block.type === 'text' ? block.text : ''))
-        .filter(Boolean)
         .join('\n')
         .trim();
 
       if (!text) {
-        throw new Error('Empty response from search.');
+        throw new Error('Empty response from model.');
       }
 
-      const cleaned = text.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```\s*$/, '').trim();
+      // Smarter JSON Extraction: Looks for anything resembling a JSON object 
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+         showError('Got a response back, but could not find structured JSON results inside it. Raw output below:', text);
+         return;
+      }
 
       let parsed;
       try {
-        parsed = JSON.parse(cleaned);
+        parsed = JSON.parse(jsonMatch[0]);
       } catch (parseErr) {
-        showError('Got a response back, but could not parse it as structured results. Raw output below — try running again.', cleaned);
+        showError('Got a response back, but the JSON was malformed and unparseable. Raw output below:', text);
         return;
       }
 
@@ -559,7 +601,7 @@ Find the most relevant real studies.`;
       renderResults(results.filter(r => r && r.title && r.url));
 
     } catch (err) {
-      showError('Something went wrong running the search: ' + err.message + '. Try again in a moment.');
+      showError('Something went wrong: ' + err.message);
     } finally {
       stopTicker();
       runBtn.disabled = false;
@@ -567,3 +609,5 @@ Find the most relevant real studies.`;
   }
 })();
 </script>
+</body>
+</html>
