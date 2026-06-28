@@ -16,7 +16,7 @@ export default async function handler(req, res) {
        return res.status(200).json({ results: [] });
     }
 
-    // Format the real papers to show to Gemini
+    // Format the real papers to show to DeepSeek
     const realPapers = pmcData.resultList.result.map(p => ({
         title: p.title,
         url: p.doi ? `https://doi.org/${p.doi}` : `https://pubmed.ncbi.nlm.nih.gov/${p.pmid}/`,
@@ -24,7 +24,7 @@ export default async function handler(req, res) {
         abstract: p.abstractText ? p.abstractText.substring(0, 300) + '...' : 'No abstract'
     }));
 
-    // 2. Send the REAL papers to Gemini to evaluate
+    // 2. Send the REAL papers to DeepSeek to evaluate
     const systemPrompt = `You are a scientific literature assistant. I will provide you with a list of REAL academic papers pulled from PubMed/Europe PMC. 
 Your job is to evaluate which ones actually match the user's research goal, select the top 8, and write a strict maximum 18-word "relevance" explanation for why it matters to their goal.
 
@@ -33,39 +33,38 @@ Respond with ONLY raw JSON matching exactly this schema:
 
     const userPrompt = `Target type: ${typeLabel || 'unspecified'}\nTarget: ${target}\nGoal: ${goal || 'General info'}\n\nHere are the real papers I found:\n${JSON.stringify(realPapers, null, 2)}\n\nFilter and return the JSON.`;
 
-    // Make the request to Google's Gemini API using the 3.5 Flash model
-    const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent`, {
+    // Make the request to DeepSeek's API
+    const dsRes = await fetch(`https://api.deepseek.com/chat/completions`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        'x-goog-api-key': process.env.GEMINI_API_KEY 
+        'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}` // Using standard Bearer auth
       },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-        safetySettings: [
-          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+        model: 'deepseek-v4-flash', 
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
         ],
-        generationConfig: {
-          responseMimeType: "application/json" 
-        }
+        response_format: { type: 'json_object' } // Forces perfect JSON parsing
       })
     });
 
-    const geminiData = await geminiRes.json();
+    const dsData = await dsRes.json();
     
-    if (geminiData.error) {
-       console.error("GOOGLE API ERROR:", JSON.stringify(geminiData.error, null, 2));
-       throw new Error(`Google rejected the request: ${geminiData.error.message}`);
+    // Catch DeepSeek specific errors
+    if (dsData.error) {
+       console.error("DEEPSEEK API ERROR:", JSON.stringify(dsData.error, null, 2));
+       throw new Error(`DeepSeek rejected the request: ${dsData.error.message}`);
     }
     
-    if (!geminiData.candidates || geminiData.candidates.length === 0) {
-       console.error("GEMINI BLOCKED RESPONSE:", JSON.stringify(geminiData, null, 2));
-       throw new Error("Gemini returned an empty response.");
+    if (!dsData.choices || dsData.choices.length === 0) {
+       console.error("DEEPSEEK BLOCKED RESPONSE:", JSON.stringify(dsData, null, 2));
+       throw new Error("DeepSeek returned an empty response.");
     }
     
-    // Extract and parse the JSON Gemini spits out
-    const text = geminiData.candidates[0].content.parts[0].text;
+    // Extract and parse the JSON DeepSeek spits out
+    const text = dsData.choices[0].message.content;
     const finalData = JSON.parse(text);
 
     // 3. Send back to your frontend
