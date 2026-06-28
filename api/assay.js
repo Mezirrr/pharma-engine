@@ -36,9 +36,18 @@ Respond with ONLY the raw query string.`;
       optimizedQuery = expansionData.choices[0].message.content.trim().replace(/^"|"$/g, '');
     }
 
-    // Phase 2: Fetch an expanded set of 30 papers to allow room for up to 15 curated selections
-    const pmcRes = await fetch(`https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(optimizedQuery)}&format=json&resultType=core&pageSize=30`);
-    const pmcData = await pmcRes.json();
+    // Phase 2: Fetch an expanded set of 30 papers
+    let pmcRes = await fetch(`https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(optimizedQuery)}&format=json&resultType=core&pageSize=30`);
+    let pmcData = await pmcRes.json();
+    let isFallback = false;
+
+    // SMART FALLBACK: If zero results, search just the target generally to gather partially related studies
+    if (!pmcData.resultList || !pmcData.resultList.result || pmcData.resultList.result.length === 0) {
+      isFallback = true;
+      const fallbackQuery = `${target}`.trim();
+      pmcRes = await fetch(`https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(fallbackQuery)}&format=json&resultType=core&pageSize=30`);
+      pmcData = await pmcRes.json();
+    }
 
     let realPapers = [];
     if (pmcData.resultList && pmcData.resultList.result) {
@@ -54,8 +63,8 @@ Respond with ONLY the raw query string.`;
     const systemPrompt = `You are an elite, highly open-minded scientific research assistant specializing in cross-disciplinary synthesis and non-obvious mechanistic cross-linking.
 
 Your task is twofold:
-1. Under "directResponse", provide a deep, high-IQ direct response explaining the conceptual, structural, biochemical, or clinical connection between the user's target and their goal. Even if zero literature matches are supplied below, use your extensive core knowledge to explore non-obvious pathways.
-2. Evaluate the provided list of papers (if any) and select the top relevant ones (up to a maximum of 15). Write a strict maximum 18-word "relevance" explanation for each, revealing how it cross-links the target to the goal.
+1. Under "directResponse", provide a deep, high-IQ direct response explaining the conceptual, structural, biochemical, or clinical connection between the user's target and their goal.
+2. Evaluate the provided list of papers and select the top relevant ones (up to a maximum of 15). Write a strict maximum 18-word "relevance" explanation for each, revealing how it links or provides foundational/partial context back to the target and goal.
 
 Respond with ONLY raw JSON matching exactly this schema:
 {
@@ -71,7 +80,7 @@ Respond with ONLY raw JSON matching exactly this schema:
   ]
 }`;
 
-    const userPrompt = `Target type: ${typeLabel || 'unspecified'}\nTarget: ${target}\nGoal: ${goal || 'General info'}\n\nHere are the real papers found via search term [${optimizedQuery}]:\n${JSON.stringify(realPapers, null, 2)}\n\nFilter and return the JSON.`;
+    const userPrompt = `Target type: ${typeLabel || 'unspecified'}\nTarget: ${target}\nGoal: ${goal || 'General info'}\nIs Fallback Broad Search: ${isFallback}\n\nHere are the real papers found:\n${JSON.stringify(realPapers, null, 2)}\n\nFilter and return the JSON.`;
 
     const groqRes = await fetch(`https://api.groq.com/openai/v1/chat/completions`, {
       method: 'POST',
@@ -91,7 +100,12 @@ Respond with ONLY raw JSON matching exactly this schema:
 
     const groqData = await groqRes.json();
     const text = groqData.choices[0].message.content;
-    res.status(200).json(JSON.parse(text));
+    
+    // Attach fallback indicator to the response payload for frontend rendering
+    const finalJson = JSON.parse(text);
+    finalJson.isFallback = isFallback;
+
+    res.status(200).json(finalJson);
 
   } catch (error) {
     console.error(error);
