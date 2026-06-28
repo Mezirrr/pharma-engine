@@ -6,6 +6,7 @@ export default async function handler(req, res) {
   const { target, goal, typeLabel } = req.body;
 
   try {
+    // Phase 1: Expand query laterally
     const queryExpansionPrompt = `You are an elite biochemical intelligence engine. The user has a research target and a lateral discovery goal.
 Target: ${target}
 Goal: ${goal}
@@ -35,8 +36,8 @@ Respond with ONLY the raw query string.`;
       optimizedQuery = expansionData.choices[0].message.content.trim().replace(/^"|"$/g, '');
     }
 
-    // Increased pageSize to 35 to ensure we have a rich selection for picking up to 15 studies
-    const pmcRes = await fetch(`https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(optimizedQuery)}&format=json&resultType=core&pageSize=35`);
+    // Phase 2: Fetch an expanded set of 30 papers to allow room for up to 15 curated selections
+    const pmcRes = await fetch(`https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(optimizedQuery)}&format=json&resultType=core&pageSize=30`);
     const pmcData = await pmcRes.json();
 
     let realPapers = [];
@@ -49,11 +50,12 @@ Respond with ONLY the raw query string.`;
       }));
     }
 
+    // Phase 3: Run the synthesis and pull up to 15 papers
     const systemPrompt = `You are an elite, highly open-minded scientific research assistant specializing in cross-disciplinary synthesis and non-obvious mechanistic cross-linking.
 
 Your task is twofold:
-1. Under "directResponse", provide a deep, high-IQ direct response explaining the conceptual, structural, biochemical, or clinical connection between the user's target and their goal.
-2. Evaluate the provided list of papers and select the top relevant ones (return UP TO 15 results). Write a strict maximum 18-word "relevance" explanation for each, revealing how it cross-links the target to the goal.
+1. Under "directResponse", provide a deep, high-IQ direct response explaining the conceptual, structural, biochemical, or clinical connection between the user's target and their goal. Even if zero literature matches are supplied below, use your extensive core knowledge to explore non-obvious pathways.
+2. Evaluate the provided list of papers (if any) and select the top relevant ones (up to a maximum of 15). Write a strict maximum 18-word "relevance" explanation for each, revealing how it cross-links the target to the goal.
 
 Respond with ONLY raw JSON matching exactly this schema:
 {
@@ -69,7 +71,7 @@ Respond with ONLY raw JSON matching exactly this schema:
   ]
 }`;
 
-    const userPrompt = `Target type: ${typeLabel || 'unspecified'}\nTarget: ${target}\nGoal: ${goal || 'General info'}\n\nHere are the real papers found via search term [${optimizedQuery}]:\n${JSON.stringify(realPapers, null, 2)}\n\nFilter and return up to 15 top results in JSON format.`;
+    const userPrompt = `Target type: ${typeLabel || 'unspecified'}\nTarget: ${target}\nGoal: ${goal || 'General info'}\n\nHere are the real papers found via search term [${optimizedQuery}]:\n${JSON.stringify(realPapers, null, 2)}\n\nFilter and return the JSON.`;
 
     const groqRes = await fetch(`https://api.groq.com/openai/v1/chat/completions`, {
       method: 'POST',
