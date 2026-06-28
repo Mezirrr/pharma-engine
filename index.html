@@ -352,6 +352,12 @@
   margin-right: 7px;
 }
 
+.assay-tag.type-tag {
+  background: var(--bench);
+  color: var(--ink-soft);
+  border: 1px solid var(--hairline);
+}
+
 .assay-footnote {
   font-size: 11.5px;
   color: var(--ink-faint);
@@ -519,6 +525,8 @@
     results.forEach((r, idx) => {
       const style = sourceStyle(r.source);
       const num = String(idx + 1).padStart(3, '0');
+      const studyTypeTag = r.studyType ? `<span class="assay-tag type-tag">${escapeHtml(r.studyType)}</span>` : '';
+      
       html += `
         <div class="assay-entry">
           <div class="assay-rail">
@@ -529,7 +537,7 @@
             <a class="assay-entry-title" href="${escapeHtml(r.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.title)}</a>
             <div class="assay-entry-relevance">${escapeHtml(r.relevance)}</div>
             <div class="assay-entry-meta">
-              <span class="assay-tag" style="background:${style.bg}; color:${style.fg}">${escapeHtml(r.source || 'source')}</span>${r.year ? escapeHtml(r.year) : ''}
+              <span class="assay-tag" style="background:${style.bg}; color:${style.fg}">${escapeHtml(r.source || 'source')}</span>${studyTypeTag}${r.year ? escapeHtml(r.year) : ''}
             </div>
           </div>
         </div>`;
@@ -610,26 +618,3 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target, goal, typeLabel })
-      });
-
-      if (!response.ok) throw new Error(`Server request failed (${response.status})`);
-
-      const parsed = await response.json();
-      const results = Array.isArray(parsed.results) ? parsed.results : [];
-      
-      // Render layout seamlessly passing the fallback token state
-      renderPayload(parsed.directResponse, results.filter(r => r && r.title && r.url), parsed.isFallback || false);
-      callSucceeded = true;
-
-    } catch (err) {
-      showError('Something went wrong running the search: ' + err.message + '. Try again in a moment.');
-      callSucceeded = false;
-    } finally {
-      stopTicker();
-      handleCooldown(callSucceeded ? 10 : 5);
-    }
-  }
-})();
-</script>
-</body>
-</html>
