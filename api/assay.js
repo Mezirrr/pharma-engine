@@ -6,25 +6,28 @@ export default async function handler(req, res) {
   const { target, goal, typeLabel } = req.body;
 
   try {
-    // Split targets by comma, trim spaces, filter empty values
     const targetsArray = target.split(',').map(t => t.trim()).filter(Boolean);
     
     if (targetsArray.length === 0) {
       return res.status(400).json({ error: 'No valid targets provided.' });
     }
 
-    // Phase 1 & 2: Process ALL targets concurrently via Promise.all
+    const ncbiApiKey = process.env.NCBI_API_KEY ? `&api_key=${process.env.NCBI_API_KEY}` : '';
+
+    // Phase 1 & 2: Process ALL targets concurrently
     const targetResults = await Promise.all(targetsArray.map(async (singleTarget) => {
-      const queryExpansionPrompt = `You are an elite biochemical intelligence engine. The user has a research target and a lateral discovery goal.
+      
+      // SMART FIX 2: Native PubMed Syntax
+      const queryExpansionPrompt = `You are an elite biochemical intelligence engine. 
 Target: ${singleTarget}
 Goal: ${goal}
 
-Generate a clean, professional, unquoted Semantic Scholar search query optimized to catch cross-disciplinary and mechanistic connections. 
-- Do not include conversational filler.
-- Provide a focused keyword string optimized for modern search (e.g., "molecule receptor mechanism"). Avoid complex boolean operators.
-- Focus on underlying pathways, target receptors, and physiological mechanisms.
+Generate a highly optimized PubMed search query. 
+- Use standard boolean operators (AND, OR).
+- Use proper PubMed search tags where appropriate, such as [Title/Abstract] or [MeSH Terms].
+- Keep it concise to ensure high yield.
 
-Respond with ONLY the raw query string.`;
+Respond with ONLY the raw query string. Do not include quotes or conversational filler.`;
 
       const expansionRes = await fetch(`https://api.groq.com/openai/v1/chat/completions`, {
         method: 'POST',
@@ -44,37 +47,55 @@ Respond with ONLY the raw query string.`;
         optimizedQuery = expansionData.choices[0].message.content.trim().replace(/^"|"$/g, '');
       }
 
-      // Fetch from Semantic Scholar API (US-hosted, fast REST API)
-      let semanticRes = await fetch(`https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(optimizedQuery)}&limit=20&fields=title,url,year,abstract,tldr`);
-      let semanticData = await semanticRes.json();
+      // 1. E-Search: Get PMIDs
+      let pubmedRes = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(optimizedQuery)}&retmode=json&retmax=15${ncbiApiKey}`);
+      let pubmedData = await pubmedRes.json();
+      let pmids = pubmedData.esearchresult?.idlist || [];
 
       let localFallbackActive = false;
-      // SMART FALLBACK per target thread
-      if (!semanticData.data || semanticData.data.length === 0) {
+      
+      // SMART FALLBACK
+      if (pmids.length === 0) {
         localFallbackActive = true;
-        const fallbackQuery = `${singleTarget}`.trim();
-        semanticRes = await fetch(`https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(fallbackQuery)}&limit=20&fields=title,url,year,abstract,tldr`);
-        semanticData = await semanticRes.json();
+        const fallbackQuery = `${singleTarget}[Title/Abstract]`.trim();
+        pubmedRes = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(fallbackQuery)}&retmode=json&retmax=15${ncbiApiKey}`);
+        pubmedData = await pubmedRes.json();
+        pmids = pubmedData.esearchresult?.idlist || [];
       }
 
       let mappedPapers = [];
-      if (semanticData.data && semanticData.data.length > 0) {
-        mappedPapers = semanticData.data.map(p => ({
-          title: p.title,
-          url: p.url || `https://www.semanticscholar.org/paper/${p.paperId}`,
-          year: p.year ? p.year.toString() : 'Unknown',
-          // Use AI-generated TLDR if available, otherwise truncate the abstract
-          abstract: p.tldr && p.tldr.text 
-            ? p.tldr.text 
-            : (p.abstract ? p.abstract.substring(0, 400) + '...' : 'No abstract available'),
-          associatedTarget: singleTarget 
-        }));
+      
+      // 2. E-Fetch: Get abstracts based on PMIDs
+      if (pmids.length > 0) {
+        const fetchRes = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${pmids.join(',')}&retmode=xml${ncbiApiKey}`);
+        const xmlText = await fetchRes.text();
+
+        const articles = xmlText.split('<PubmedArticle>');
+        articles.shift(); 
+
+        mappedPapers = articles.map(article => {
+          const titleMatch = article.match(/<ArticleTitle[^>]*>(.*?)<\/ArticleTitle>/);
+          const yearMatch = article.match(/<PubDate>[\s\S]*?<Year>(.*?)<\/Year>[\s\S]*?<\/PubDate>/) || article.match(/<MedlineDate>(.*?)<\/MedlineDate>/);
+          const pmidMatch = article.match(/<PMID[^>]*>(.*?)<\/PMID>/);
+          
+          // SMART FIX 1: Stitch structured abstracts together
+          const abstractMatches = [...article.matchAll(/<AbstractText[^>]*>(.*?)<\/AbstractText>/gs)];
+          // Strip any stray internal XML/HTML tags (like <i> or <b>) from the abstract text
+          const fullAbstract = abstractMatches.map(m => m[1]).join(' ').replace(/<[^>]*>?/gm, '');
+
+          return {
+            title: titleMatch ? titleMatch[1] : 'Unknown Title',
+            url: pmidMatch ? `https://pubmed.ncbi.nlm.nih.gov/${pmidMatch[1]}/` : '',
+            year: yearMatch ? yearMatch[1] : 'Unknown',
+            abstract: fullAbstract ? fullAbstract.substring(0, 400) + '...' : 'No abstract available',
+            associatedTarget: singleTarget 
+          };
+        }).filter(p => p.url); 
       }
 
       return { mappedPapers, fallbackTriggered: localFallbackActive };
     }));
 
-    // Recombine concurrently retrieved lists safely without race conditions
     let allRealPapers = [];
     let fallbackTriggered = false;
 
@@ -85,24 +106,25 @@ Respond with ONLY the raw query string.`;
       }
     }
 
-    // Deduplicate papers globally by URL just in case searches overlap
     const seenUrls = new Set();
     const uniquePapers = allRealPapers.filter(p => {
       if (!p.url || seenUrls.has(p.url)) return false;
       seenUrls.add(p.url);
       return true;
-    }).slice(0, 35); // Keep top 35 elements across all targets to filter down
+    }).slice(0, 35);
 
     // Phase 3: Dynamic Multi-Target Synthesis
     const targetsHeading = targetsArray.join(', ');
+    
+    // SMART FIX 3: Hallucination Guardrail
     const systemPrompt = `You are an elite, highly open-minded scientific research assistant specializing in cross-disciplinary synthesis and non-obvious mechanistic cross-linking.
 
 Your task is:
 1. Under "directResponse", provide a highly technical, high-IQ synthesis explaining the conceptual, structural, biochemical, or clinical connection between the user's targets (${targetsHeading}) and their discovery goal.
    - Map out synergistic actions, shared metabolic pathways, or direct ligand-receptor convergence points.
    - Trace cross-talk, competing mechanisms, receptor saturation, and counter-regulatory loops.
-   - Detail the explicit molecular mechanisms behind any combined toxicities or emergent pharmacological properties. 
-2. Under "followUpOptions", provide exactly 3 deeply analytical follow-up questions (strings) investigating cascading enzymatic steps or structural affinities based on your analysis. Max 12 words each.
+   - If the provided papers are irrelevant or empty, state this clearly, but STILL provide your best theoretical analysis based on your internal knowledge base.
+2. Under "followUpOptions", provide exactly 3 deeply analytical follow-up questions (strings) investigating cascading enzymatic steps or structural affinities. Max 12 words each.
 3. Select the top relevant papers (up to 15). 
    - Write a strict max 18-word "relevance" explanation for each, explicitly linking its findings to the target matrix.
    - Classify "studyType" strictly as: "In Vitro", "In Vivo", or "Human". Default to "In Vivo" if ambiguous.
@@ -115,7 +137,7 @@ Respond with ONLY raw JSON matching exactly this schema:
     {
       "title": "string",
       "url": "string",
-      "source": "Semantic Scholar",
+      "source": "PubMed",
       "year": "string",
       "relevance": "string",
       "studyType": "In Vitro | In Vivo | Human"
