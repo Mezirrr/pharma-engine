@@ -41,22 +41,29 @@ export default async function handler(req, res) {
     }
 
     const ncbiApiKey = process.env.NCBI_API_KEY ? `&api_key=${process.env.NCBI_API_KEY}` : '';
+    const targetsHeading = targetsArray.join(', ');
 
-    // Phase 1 & 2: Process ALL targets concurrently
-    const targetResults = await Promise.all(targetsArray.map(async (singleTarget) => {
-      
-      const queryExpansionPrompt = `You are an elite biochemical intelligence engine. 
-Target: ${singleTarget}
-Goal: ${goal}
+    // ==========================================
+    // PHASE 1: Internal Pre-Enhancer
+    // Reframes vague inputs into elite search vectors in a single call
+    // ==========================================
+    const enhancerSystemPrompt = `You are an elite biochemical intelligence engine. Optimize the user's inputs for literature retrieval.
+Respond ONLY with JSON matching this schema:
+{
+  "enhancedGoal": "A hyper-technical reframing of the user's goal, expanding vague terms into specific mechanistic, enzymatic, or structural pathways (max 2 sentences).",
+  "optimizedQueries": {
+    "TargetName1": "PubMed query string using AND/OR, [MeSH Terms], and [Title/Abstract]",
+    "TargetName2": "..."
+  }
+}`;
 
-Generate a highly optimized PubMed search query. 
-- Use standard boolean operators (AND, OR).
-- Use proper PubMed search tags where appropriate, such as [Title/Abstract] or [MeSH Terms].
-- Keep it concise to ensure high yield.
+    const enhancerUserPrompt = `Targets: ${targetsHeading}\nRaw Goal: ${goal || 'General pharmacological profile and mechanisms'}`;
+    
+    let enhancedGoal = goal;
+    let optimizedQueries = {};
 
-Respond with ONLY the raw query string. Do not include quotes or conversational filler.`;
-
-      const expansionRes = await fetchWithRetry(`https://api.groq.com/openai/v1/chat/completions`, {
+    try {
+      const enhancerRes = await fetchWithRetry(`https://api.groq.com/openai/v1/chat/completions`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -64,14 +71,33 @@ Respond with ONLY the raw query string. Do not include quotes or conversational 
         },
         body: JSON.stringify({
           model: 'openai/gpt-oss-120b', 
-          messages: [{ role: 'user', content: queryExpansionPrompt }]
+          messages: [
+            { role: 'system', content: enhancerSystemPrompt },
+            { role: 'user', content: enhancerUserPrompt }
+          ],
+          response_format: { type: 'json_object' }
         })
-      }, 2, 5000);
+      }, 2, 6000);
 
-      const expansionData = await expansionRes.json();
-      let optimizedQuery = `${singleTarget} ${goal}`.trim();
-      if (expansionData.choices && expansionData.choices.length > 0) {
-        optimizedQuery = expansionData.choices[0].message.content.trim().replace(/^"|"$/g, '');
+      const enhancerData = await enhancerRes.json();
+      const enhancerJson = JSON.parse(enhancerData.choices[0].message.content);
+      
+      enhancedGoal = enhancerJson.enhancedGoal || goal;
+      optimizedQueries = enhancerJson.optimizedQueries || {};
+    } catch (e) {
+      console.warn("Internal Enhancer skipped/failed, falling back to raw strings.", e.message);
+    }
+
+    // ==========================================
+    // PHASE 2: Concurrent PubMed Fetching
+    // Uses the optimized queries from Phase 1
+    // ==========================================
+    const targetResults = await Promise.all(targetsArray.map(async (singleTarget) => {
+      
+      // Map to the enhanced query, or fallback to a basic concatenation
+      let optimizedQuery = optimizedQueries[singleTarget];
+      if (!optimizedQuery) {
+        optimizedQuery = `${singleTarget} ${enhancedGoal}`.trim();
       }
 
       // 1. E-Search: Get PMIDs
@@ -81,7 +107,7 @@ Respond with ONLY the raw query string. Do not include quotes or conversational 
 
       let localFallbackActive = false;
       
-      // SMART FALLBACK
+      // SMART FALLBACK: If the enhanced query was too strict, loosen it.
       if (pmids.length === 0) {
         localFallbackActive = true;
         const fallbackQuery = `${singleTarget}[Title/Abstract]`.trim();
@@ -138,10 +164,9 @@ Respond with ONLY the raw query string. Do not include quotes or conversational 
       return true;
     }).slice(0, 35);
 
-    // Phase 3: Dynamic Multi-Target Synthesis
-    const targetsHeading = targetsArray.join(', ');
-    
-    // ADJUSTED FOR 130-IQ PERSONALIZATION
+    // ==========================================
+    // PHASE 3: Dynamic Multi-Target Synthesis
+    // ==========================================
     const systemPrompt = `You are a 130-IQ, elite biochemical intelligence architecture specializing in cross-disciplinary synthesis and non-obvious mechanistic cross-linking.
 
 Your task is:
@@ -172,7 +197,17 @@ Respond with ONLY raw JSON matching exactly this schema:
   ]
 }`;
 
-    const userPrompt = `Target type: ${typeLabel || 'unspecified'}\nAll Inputs Requested: ${targetsHeading}\nGoal: ${goal || 'General info'}\nIs Fallback Broad Search Active: ${fallbackTriggered}\n\nHere are the real compiled papers found across targets:\n${JSON.stringify(uniquePapers, null, 2)}\n\nFilter and return the JSON.`;
+    // Note that we are passing the internal "Enhanced Context" here to ground the synthesis.
+    const userPrompt = `Target type: ${typeLabel || 'unspecified'}
+All Inputs Requested: ${targetsHeading}
+Original Goal: ${goal || 'General info'}
+Enhanced Analytical Context: ${enhancedGoal}
+Is Fallback Broad Search Active: ${fallbackTriggered}
+
+Here are the real compiled papers found across targets:
+${JSON.stringify(uniquePapers, null, 2)}
+
+Filter and return the JSON.`;
 
     const groqRes = await fetchWithRetry(`https://api.groq.com/openai/v1/chat/completions`, {
       method: 'POST',
