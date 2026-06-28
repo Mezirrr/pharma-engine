@@ -13,15 +13,15 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'No valid targets provided.' });
     }
 
-    // Phase 1 & 2: Process ALL targets concurrently via Promise.all to maximize latency reduction (~6s -> ~4s)
+    // Phase 1 & 2: Process ALL targets concurrently via Promise.all
     const targetResults = await Promise.all(targetsArray.map(async (singleTarget) => {
       const queryExpansionPrompt = `You are an elite biochemical intelligence engine. The user has a research target and a lateral discovery goal.
 Target: ${singleTarget}
 Goal: ${goal}
 
-Generate a clean, professional, unquoted PubMed/EuropePMC search query optimized to catch cross-disciplinary and mechanistic connections. 
+Generate a clean, professional, unquoted Semantic Scholar search query optimized to catch cross-disciplinary and mechanistic connections. 
 - Do not include conversational filler.
-- Use boolean operators (AND, OR) and clean keyword groupings.
+- Provide a focused keyword string optimized for modern search (e.g., "molecule receptor mechanism"). Avoid complex boolean operators.
 - Focus on underlying pathways, target receptors, and physiological mechanisms.
 
 Respond with ONLY the raw query string.`;
@@ -44,25 +44,29 @@ Respond with ONLY the raw query string.`;
         optimizedQuery = expansionData.choices[0].message.content.trim().replace(/^"|"$/g, '');
       }
 
-      let pmcRes = await fetch(`https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(optimizedQuery)}&format=json&resultType=core&pageSize=20`);
-      let pmcData = await pmcRes.json();
+      // Fetch from Semantic Scholar API (US-hosted, fast REST API)
+      let semanticRes = await fetch(`https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(optimizedQuery)}&limit=20&fields=title,url,year,abstract,tldr`);
+      let semanticData = await semanticRes.json();
 
       let localFallbackActive = false;
       // SMART FALLBACK per target thread
-      if (!pmcData.resultList || !pmcData.resultList.result || pmcData.resultList.result.length === 0) {
+      if (!semanticData.data || semanticData.data.length === 0) {
         localFallbackActive = true;
         const fallbackQuery = `${singleTarget}`.trim();
-        pmcRes = await fetch(`https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(fallbackQuery)}&format=json&resultType=core&pageSize=20`);
-        pmcData = await pmcRes.json();
+        semanticRes = await fetch(`https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(fallbackQuery)}&limit=20&fields=title,url,year,abstract,tldr`);
+        semanticData = await semanticRes.json();
       }
 
       let mappedPapers = [];
-      if (pmcData.resultList && pmcData.resultList.result) {
-        mappedPapers = pmcData.resultList.result.map(p => ({
+      if (semanticData.data && semanticData.data.length > 0) {
+        mappedPapers = semanticData.data.map(p => ({
           title: p.title,
-          url: p.doi ? `https://doi.org/${p.doi}` : `https://pubmed.ncbi.nlm.nih.gov/${p.pmid}/`,
-          year: p.pubYear,
-          abstract: p.abstractText ? p.abstractText.substring(0, 400) + '...' : 'No abstract available',
+          url: p.url || `https://www.semanticscholar.org/paper/${p.paperId}`,
+          year: p.year ? p.year.toString() : 'Unknown',
+          // Use AI-generated TLDR if available, otherwise truncate the abstract
+          abstract: p.tldr && p.tldr.text 
+            ? p.tldr.text 
+            : (p.abstract ? p.abstract.substring(0, 400) + '...' : 'No abstract available'),
           associatedTarget: singleTarget 
         }));
       }
@@ -84,7 +88,7 @@ Respond with ONLY the raw query string.`;
     // Deduplicate papers globally by URL just in case searches overlap
     const seenUrls = new Set();
     const uniquePapers = allRealPapers.filter(p => {
-      if (seenUrls.has(p.url)) return false;
+      if (!p.url || seenUrls.has(p.url)) return false;
       seenUrls.add(p.url);
       return true;
     }).slice(0, 35); // Keep top 35 elements across all targets to filter down
@@ -94,14 +98,14 @@ Respond with ONLY the raw query string.`;
     const systemPrompt = `You are an elite, highly open-minded scientific research assistant specializing in cross-disciplinary synthesis and non-obvious mechanistic cross-linking.
 
 Your task is:
-1. Under "directResponse", provide a deep, high-IQ direct response explaining the conceptual, structural, biochemical, or clinical connection between the user's multiple targets (${targetsHeading}) and their specific discovery goal.
-   - Map out synergistic actions, shared pathways, or direct cell-signaling convergence points (e.g., direct ligand-receptor interactions).
-   - Trace cross-talk between related ligands/pathways comprehensively. Analyze competing mechanisms, receptor saturation elements, counter-regulatory loops, or alternative signaling adjustments when these compounds act together or contrast.
-   - Detail the explicit molecular mechanisms behind any combined side effects, toxicities, or runaways. Emphasize deep pharmacological nuances, cascading enzymatic steps, and structural affinities.
-2. Under "followUpOptions", provide exactly 3 deeply analytical, logical follow-up questions/goals (strings) based on the current analysis that a researcher might want to investigate next. Keep them under 12 words each.
-3. Evaluate the combined list of papers and select the top relevant ones (up to a maximum of 15 total). 
-   - Write a strict maximum 18-word "relevance" explanation for each, revealing how it links or provides foundational/partial context back to the target matrix and goal.
-   - Analyze the title and abstract text to accurately classify the "studyType" as exactly one of these strings: "In Vitro", "In Vivo", or "Human". If it cannot be determined, default to "In Vivo".
+1. Under "directResponse", provide a highly technical, high-IQ synthesis explaining the conceptual, structural, biochemical, or clinical connection between the user's targets (${targetsHeading}) and their discovery goal.
+   - Map out synergistic actions, shared metabolic pathways, or direct ligand-receptor convergence points.
+   - Trace cross-talk, competing mechanisms, receptor saturation, and counter-regulatory loops.
+   - Detail the explicit molecular mechanisms behind any combined toxicities or emergent pharmacological properties. 
+2. Under "followUpOptions", provide exactly 3 deeply analytical follow-up questions (strings) investigating cascading enzymatic steps or structural affinities based on your analysis. Max 12 words each.
+3. Select the top relevant papers (up to 15). 
+   - Write a strict max 18-word "relevance" explanation for each, explicitly linking its findings to the target matrix.
+   - Classify "studyType" strictly as: "In Vitro", "In Vivo", or "Human". Default to "In Vivo" if ambiguous.
 
 Respond with ONLY raw JSON matching exactly this schema:
 {
@@ -111,7 +115,7 @@ Respond with ONLY raw JSON matching exactly this schema:
     {
       "title": "string",
       "url": "string",
-      "source": "PubMed",
+      "source": "Semantic Scholar",
       "year": "string",
       "relevance": "string",
       "studyType": "In Vitro | In Vivo | Human"
