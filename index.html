@@ -211,6 +211,28 @@
   line-height: 1.6;
 }
 
+.assay-direct-response {
+  background: linear-gradient(to bottom right, #ffffff, var(--bench));
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--reagent);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.assay-direct-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--reagent);
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+
 .assay-resultsbar {
   display: flex;
   justify-content: space-between;
@@ -372,7 +394,7 @@
   const outputEl = root.querySelector('#assayOutput');
 
   let selectedType = 'auto';
-  let lastResults = [];
+  let isCooldown = false;
   let tickerInterval = null;
 
   pills.forEach(p => {
@@ -392,15 +414,17 @@
 
   [targetInput, goalInput].forEach(el => {
     el.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); run(); }
+      if (e.key === 'Enter' && !e.shiftKey) { 
+        e.preventDefault(); 
+        if (!isCooldown) run(); 
+      }
     });
   });
 
   runBtn.addEventListener('click', run);
 
   const tickerPhrases = [
-    'querying pubmed', 'cross-referencing scholar', 'checking specialty databases',
-    'reading abstracts', 'scoring relevance', 'logging specimens'
+    'optimizing search parameter matrices', 'querying pubmed systems', 'cross-referencing structural records', 'analyzing abstracts with 120b logic', 'scoring lateral path linkages'
   ];
 
   function startTicker() {
@@ -436,13 +460,25 @@
     return d.innerHTML;
   }
 
-  function renderResults(results) {
-    lastResults = results;
-    if (!results.length) {
-      outputEl.innerHTML = '<div class="assay-empty">No matching studies turned up for this target and goal. Try broadening the goal or double-checking the target name.</div>';
+  function renderPayload(directResponse, results) {
+    let html = '';
+    
+    if (directResponse) {
+      html += `
+        <div class="assay-direct-response">
+          <div class="assay-direct-title">Synthesis & Analytical Cross-Linking</div>
+          <div>${escapeHtml(directResponse)}</div>
+        </div>
+      `;
+    }
+
+    if (!results || !results.length) {
+      html += '<div class="assay-empty">No exact literature matching current keywords. See synthesis analysis box above for structural insights.</div>';
+      outputEl.innerHTML = html;
       return;
     }
-    let html = `
+
+    html += `
       <div class="assay-resultsbar">
         <span class="assay-resultscount">${results.length} result${results.length === 1 ? '' : 's'}</span>
         <button class="assay-copy" id="assayCopyLinks">Copy all links</button>
@@ -468,29 +504,49 @@
         </div>`;
     });
 
-    html += '</div><div class="assay-footnote">Links open in a new tab. Always check the original study before relying on it — search results can occasionally miss context.</div>';
+    html += '</div><div class="assay-footnote">Links open in a new tab. Always review structural documentation before proceeding.</div>';
     outputEl.innerHTML = html;
 
-    root.querySelector('#assayCopyLinks').addEventListener('click', () => {
-      const text = results.map(r => r.url).join('\n');
-      navigator.clipboard.writeText(text).then(() => {
-        const btn = root.querySelector('#assayCopyLinks');
-        const original = btn.textContent;
-        btn.textContent = 'Copied';
-        setTimeout(() => { btn.textContent = original; }, 1500);
+    const copyBtn = root.querySelector('#assayCopyLinks');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => {
+        const text = results.map(r => r.url).join('\n');
+        navigator.clipboard.writeText(text).then(() => {
+          const original = copyBtn.textContent;
+          copyBtn.textContent = 'Copied';
+          setTimeout(() => { copyBtn.textContent = original; }, 1500);
+        });
       });
-    });
+    }
   }
 
-  function showError(message, raw) {
-    let html = `<div class="assay-error">${escapeHtml(message)}</div>`;
-    if (raw) {
-      html += `<div class="assay-empty" style="text-align:left; white-space:pre-wrap; font-family:'IBM Plex Mono',monospace; font-size:11.5px;">${escapeHtml(raw.slice(0, 1500))}</div>`;
-    }
-    outputEl.innerHTML = html;
+  function showError(message) {
+    outputEl.innerHTML = `<div class="assay-error">${escapeHtml(message)}</div>`;
+  }
+
+  function handleCooldown() {
+    isCooldown = true;
+    runBtn.disabled = true;
+    let secondsLeft = 5;
+    
+    runBtn.textContent = `Hold (${secondsLeft}s)`;
+    
+    const interval = setInterval(() => {
+      secondsLeft--;
+      if (secondsLeft <= 0) {
+        clearInterval(interval);
+        isCooldown = false;
+        runBtn.disabled = false;
+        runBtn.textContent = 'Run assay';
+      } else {
+        runBtn.textContent = `Hold (${secondsLeft}s)`;
+      }
+    }, 1000);
   }
 
   async function run() {
+    if (isCooldown) return;
+    
     const target = targetInput.value.trim();
     const goal = goalInput.value.trim();
     if (!target) {
@@ -500,37 +556,32 @@
       return;
     }
 
-    runBtn.disabled = true;
     outputEl.innerHTML = '';
     startTicker();
+    
+    // Lock interaction elements instantly
+    runBtn.disabled = true;
 
     const typeLabel = selectedType === 'auto' ? 'unspecified' : selectedType;
 
     try {
-      // Send the data to your own backend API
       const response = await fetch('/api/assay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          target: target, 
-          goal: goal, 
-          typeLabel: typeLabel 
-        })
+        body: JSON.stringify({ target, goal, typeLabel })
       });
 
-      if (!response.ok) {
-        throw new Error(`Server request failed (${response.status})`);
-      }
+      if (!response.ok) throw new Error(`Server request failed (${response.status})`);
 
       const parsed = await response.json();
       const results = Array.isArray(parsed.results) ? parsed.results : [];
-      renderResults(results.filter(r => r && r.title && r.url));
+      renderPayload(parsed.directResponse, results.filter(r => r && r.title && r.url));
 
     } catch (err) {
       showError('Something went wrong running the search: ' + err.message + '. Try again in a moment.');
     } finally {
       stopTicker();
-      runBtn.disabled = false;
+      handleCooldown(); // Engages the 5s hard button block safely after work finishes
     }
   }
 })();
