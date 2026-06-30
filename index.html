@@ -13,7 +13,7 @@
       --surface: #FFFFFF;
       --surface-hover: #F1F5F9;
       --border: #E2E8F0;
-      --primary: #0F172A;   /* deep navy */
+      --primary: #0F172A;
       --primary-soft: rgba(15,23,42,0.04);
       --accent: #2563EB;
       --accent-soft: rgba(37,99,235,0.08);
@@ -31,6 +31,7 @@
       --radius: 16px;
       --radius-sm: 12px;
       --transition: 0.2s ease;
+      --transition-slow: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1.2);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -44,7 +45,6 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      position: relative;
       overflow-x: hidden;
     }
 
@@ -53,6 +53,7 @@
       max-width: 760px;
       padding: 20px;
       margin-bottom: 80px;
+      position: relative;
     }
 
     /* Header */
@@ -73,7 +74,9 @@
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: var(--accent);
+      transition: transform var(--transition-slow);
     }
+    .logo:hover { transform: scale(1.02); }
     .logo-dot {
       width: 10px; height: 10px;
       border-radius: 50%;
@@ -91,14 +94,14 @@
       justify-content: center;
       cursor: pointer;
       box-shadow: var(--shadow-sm);
-      transition: all var(--transition);
+      transition: all var(--transition-slow);
       color: var(--text);
     }
     .profile-btn:hover {
       border-color: var(--accent);
       color: var(--accent);
       box-shadow: var(--shadow-md);
-      transform: translateY(-1px);
+      transform: translateY(-2px) scale(1.05);
     }
     .profile-btn.logged-in {
       background: var(--accent);
@@ -109,13 +112,13 @@
     /* Pages */
     .page {
       display: none;
-      animation: fadeSlide 0.3s ease;
+      animation: fadeSlide 0.35s cubic-bezier(0.25, 0.8, 0.25, 1.2);
     }
     .page.active { display: block; }
 
     @keyframes fadeSlide {
-      from { opacity: 0; transform: translateY(12px); }
-      to { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; transform: translateY(18px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
     }
 
     /* Card style */
@@ -126,6 +129,11 @@
       padding: 28px;
       margin-bottom: 24px;
       box-shadow: var(--shadow-md);
+      transition: box-shadow var(--transition), transform var(--transition);
+    }
+    .card:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-2px);
     }
 
     .field { margin-bottom: 20px; }
@@ -179,12 +187,13 @@
       cursor: pointer;
       transition: all 0.15s;
     }
-    .pill:hover { border-color: var(--text-faint); }
+    .pill:hover { border-color: var(--text-faint); transform: translateY(-1px); }
     .pill.active {
       background: var(--primary);
       border-color: var(--primary);
       color: white;
-      box-shadow: 0 4px 10px rgba(15,23,42,0.15);
+      box-shadow: 0 4px 12px rgba(15,23,42,0.2);
+      transform: translateY(-1px);
     }
 
     .btn {
@@ -197,7 +206,7 @@
       border-radius: var(--radius-sm);
       padding: 12px 24px;
       cursor: pointer;
-      transition: all 0.15s;
+      transition: all var(--transition-slow);
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -208,13 +217,13 @@
       background: var(--accent);
       color: white;
     }
-    .btn-primary:hover { background: #1D4ED8; transform: translateY(-1px); box-shadow: var(--shadow-md); }
+    .btn-primary:hover { background: #1D4ED8; transform: translateY(-2px) scale(1.02); box-shadow: var(--shadow-md); }
     .btn-secondary {
       background: transparent;
       border: 1px solid var(--border);
       color: var(--text-secondary);
     }
-    .btn-secondary:hover { background: var(--surface-hover); }
+    .btn-secondary:hover { background: var(--surface-hover); transform: translateY(-1px); }
     .btn:disabled { opacity: 0.5; pointer-events: none; }
 
     .row-btns { display: flex; gap: 12px; margin-top: 24px; }
@@ -232,6 +241,7 @@
       align-items: center;
       gap: 8px;
       box-shadow: var(--shadow-sm);
+      animation: fadeSlide 0.2s ease;
     }
     .cursor {
       width: 6px; height: 16px;
@@ -253,7 +263,7 @@
       font-size: 14px;
       box-shadow: 0 12px 30px rgba(0,0,0,0.2);
       z-index: 2000;
-      animation: slideDown 0.3s ease;
+      animation: slideDown 0.4s ease;
       display: none;
     }
     @keyframes slideDown {
@@ -278,7 +288,9 @@
       color: white;
       font-size: 28px;
       font-weight: 700;
+      transition: transform var(--transition-slow);
     }
+    .avatar:hover { transform: scale(1.05) rotate(2deg); }
     .tier-badge {
       display: inline-block;
       padding: 4px 12px;
@@ -292,12 +304,30 @@
     .tier-mini { background: var(--accent-soft); color: var(--accent); }
     .tier-max  { background: var(--success-soft); color: var(--success); }
 
+    .usage-stat {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 6px 0 20px;
+    }
+
     .upgrade-card {
-      background: var(--surface-hover);
+      background: linear-gradient(135deg, #F0F4FF 0%, #FFFFFF 100%);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
-      padding: 20px;
-      margin-top: 24px;
+      padding: 24px;
+      margin-top: 32px;
+      text-align: center;
+    }
+    .upgrade-heading {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--primary);
+    }
+    .upgrade-sub {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
     }
 
     .sci-hub-link {
@@ -322,6 +352,25 @@
       align-items: center;
       gap: 4px;
       margin-bottom: 24px;
+      transition: transform var(--transition-slow);
+    }
+    .back-link:hover { transform: translateX(-4px); }
+
+    /* Assay output tweaks */
+    .result-entry {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 18px;
+      margin-bottom: 12px;
+      display: flex;
+      gap: 16px;
+      transition: all var(--transition-slow);
+      animation: fadeSlide 0.25s ease;
+    }
+    .result-entry:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
     }
   </style>
 </head>
@@ -387,20 +436,24 @@
           </div>
         </div>
 
-        <div class="field">
-          <label class="label">Assays used this month</label>
-          <span style="font-size:20px; font-weight:700;" id="usageDisplay">--</span>
+        <div class="usage-stat">
+          Used <strong id="usedDisplay">0</strong> of <strong id="limitDisplay">10</strong> assays this month
         </div>
 
         <div class="upgrade-card">
-          <label class="label">Upgrade Permissions</label>
-          <button class="btn btn-primary" style="width:100%; margin-bottom:10px;" id="upgradeMiniBtn">Upgrade to Mini (50 assays/mo)</button>
-          <button class="btn" style="width:100%; background:var(--success); color:white;" id="upgradeMaxBtn">Upgrade to Max (unlimited)</button>
+          <div class="upgrade-heading">⚡ Upgrade Your Permission</div>
+          <div class="upgrade-sub">Unlock higher limits and support the engine</div>
+          <button class="btn btn-primary" style="width:100%; margin-bottom:12px;" id="upgradeMiniBtn">
+            Mini – $15/mo (250 assays)
+          </button>
+          <button class="btn" style="width:100%; background:var(--success); color:white;" id="upgradeMaxBtn">
+            Max – $30/mo (750 assays)
+          </button>
         </div>
 
         <hr>
         <div class="sci-hub-link">
-          Study not showing full‑text? Enter DOI in <a href="https://sci-hub.ru" target="_blank" rel="noopener">Sci‑Hub.ru</a>
+          Study not showing full‑text? Try <a href="https://sci-hub.ru" target="_blank" rel="noopener">Sci‑Hub.ru</a>
         </div>
         <button class="btn btn-secondary" style="width:100%; margin-top:20px;" id="logoutBtn">Log Out</button>
       </div>
@@ -420,9 +473,7 @@
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   let currentUser = null;
 
-  // =============================================
-  // DOM ELEMENTS
-  // =============================================
+  // DOM
   const assayPage = document.getElementById('assayPage');
   const profilePage = document.getElementById('profilePage');
   const profileBtn = document.getElementById('profileBtn');
@@ -438,7 +489,8 @@
   const outputArea = document.getElementById('outputArea');
 
   const tierBadge = document.getElementById('tierBadge');
-  const usageDisplay = document.getElementById('usageDisplay');
+  const usedDisplay = document.getElementById('usedDisplay');
+  const limitDisplay = document.getElementById('limitDisplay');
   const profileNameDisplay = document.getElementById('profileNameDisplay');
   const profileEmailDisplay = document.getElementById('profileEmailDisplay');
   const avatarInitial = document.getElementById('avatarInitial');
@@ -446,38 +498,28 @@
   let selectedType = 'auto';
   let isCooldown = false;
 
-  // =============================================
-  // TOAST UTILITY
-  // =============================================
+  const TIER_LIMITS = { Free: 10, Mini: 250, Max: 750 };
+
   function showToast(message, duration = 3000) {
     toast.textContent = message;
     toast.style.display = 'block';
     setTimeout(() => { toast.style.display = 'none'; }, duration);
   }
 
-  // =============================================
-  // PAGE SWITCHING
-  // =============================================
   function showAssay() {
     assayPage.classList.add('active');
     profilePage.classList.remove('active');
-    backToAssay.style.display = 'none';
   }
   function showProfile() {
     assayPage.classList.remove('active');
     profilePage.classList.add('active');
-    backToAssay.style.display = 'inline-flex';
   }
 
-  // =============================================
-  // AUTH & PROFILE LOGIC
-  // =============================================
   async function getSession() {
     const { data: { session } } = await supabase.auth.getSession();
     return session || null;
   }
-
-  window.getPharmaEngineSession = getSession; // for assay run
+  window.getPharmaEngineSession = getSession;
 
   async function updateProfileUI() {
     const session = await getSession();
@@ -489,28 +531,27 @@
       profileEmailDisplay.textContent = currentUser.email;
       avatarInitial.textContent = (currentUser.user_metadata?.full_name?.[0] || currentUser.email[0]).toUpperCase();
 
-      // Fetch profile data
       const { data, error } = await supabase
         .from('profiles')
-        .select('tier, assays_used_this_month')
+        .select('tier, assays_used_this_month, usage_period')
         .eq('id', currentUser.id)
         .single();
 
-      if (data) {
-        tierBadge.textContent = data.tier + ' Tier';
-        tierBadge.className = 'tier-badge tier-' + data.tier.toLowerCase();
-        usageDisplay.textContent = data.assays_used_this_month;
-      } else {
-        // Fallback if RLS not set yet
-        tierBadge.textContent = 'Free Tier';
-        tierBadge.className = 'tier-badge tier-free';
-        usageDisplay.textContent = 'unknown';
-      }
+      const period = new Date().toISOString().slice(0, 7);
+      const used = (data && data.usage_period === period) ? (data.assays_used_this_month || 0) : 0;
+      const tier = data?.tier || 'Free';
+      const limit = TIER_LIMITS[tier] || 10;
+
+      tierBadge.textContent = tier + ' Tier';
+      tierBadge.className = 'tier-badge tier-' + tier.toLowerCase();
+      usedDisplay.textContent = used;
+      limitDisplay.textContent = limit;
     } else {
       profileBtn.classList.remove('logged-in');
       tierBadge.textContent = 'Free Tier';
       tierBadge.className = 'tier-badge tier-free';
-      usageDisplay.textContent = '--';
+      usedDisplay.textContent = '0';
+      limitDisplay.textContent = '10';
       avatarInitial.textContent = '?';
       profileNameDisplay.textContent = 'Not logged in';
       profileEmailDisplay.textContent = '';
@@ -522,19 +563,13 @@
       showProfile();
       updateProfileUI();
     } else {
-      // Show inline auth modal? We'll use a simple card on profile page instead.
       showProfile();
-      // But profile page now requires login, so we can show login form there.
-      // I'll handle this in the profile page view: if no user, show login/signup.
       renderAuthForm();
     }
   });
 
   backToAssay.addEventListener('click', showAssay);
 
-  // =============================================
-  // AUTH FORM (inside profile page when not logged in)
-  // =============================================
   function renderAuthForm() {
     profilePage.innerHTML = `
       <div class="card">
@@ -579,13 +614,13 @@
         authErrorEl.textContent = error.message;
         authErrorEl.style.display = 'block';
       } else if (data.user) {
-        // Auto-insert profile row
         await supabase.from('profiles').insert([
           { id: data.user.id, email: data.user.email, tier: 'Free', assays_used_this_month: 0 }
         ]);
         showToast('Account created! Check your email to confirm.', 4000);
         await updateProfileUI();
-        showProfile(); // refresh profile page
+        showProfile();
+        renderAuthForm(); // refresh to show profile
       }
     });
 
@@ -607,43 +642,27 @@
     });
   }
 
-  // =============================================
-  // EMAIL CONFIRMATION HANDLER
-  // =============================================
+  // Email confirm handler
   window.addEventListener('load', async () => {
-    // Handle access_token in URL hash (after email confirmation redirect)
     if (window.location.hash && window.location.hash.includes('access_token')) {
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const accessToken = hashParams.get('access_token');
       const refreshToken = hashParams.get('refresh_token');
       if (accessToken && refreshToken) {
-        const { error } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken
-        });
-        if (!error) {
-          showToast('Email confirmed successfully!', 5000);
-          // Clean URL
-          window.history.replaceState({}, document.title, window.location.pathname);
-          await updateProfileUI();
-        }
+        await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+        showToast('Email confirmed successfully!', 5000);
+        window.history.replaceState({}, document.title, window.location.pathname);
+        await updateProfileUI();
       }
     }
-
-    // Also check for ?confirmed=true (our manual redirect)
     if (new URLSearchParams(window.location.search).has('confirmed')) {
       showToast('Email confirmed. You can now log in.', 5000);
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-
-    // Initial UI
     await updateProfileUI();
-    showAssay(); // start on assay page
+    showAssay();
   });
 
-  // =============================================
-  // LOGOUT
-  // =============================================
   document.getElementById('logoutBtn').addEventListener('click', async () => {
     await supabase.auth.signOut();
     currentUser = null;
@@ -652,9 +671,7 @@
     showAssay();
   });
 
-  // =============================================
-  // UPGRADE BUTTONS
-  // =============================================
+  // Upgrade buttons
   document.getElementById('upgradeMiniBtn').addEventListener('click', () => {
     if (!currentUser) return showToast('Please log in first.');
     const url = new URL(BOOMFI_MINI_LINK);
@@ -670,9 +687,7 @@
     window.location.href = url.toString();
   });
 
-  // =============================================
-  // ASSAY ENGINE (copied and adapted)
-  // =============================================
+  // Assay logic
   typePills.forEach(p => {
     p.addEventListener('click', () => {
       typePills.forEach(x => x.classList.remove('active'));
@@ -729,7 +744,7 @@
     let html = '';
     if (directResponse) {
       html += `
-        <div class="card" style="border-left:4px solid var(--accent);">
+        <div class="card" style="border-left:4px solid var(--accent); animation: fadeSlide 0.3s ease;">
           <div class="label" style="color:var(--accent);">Synthesis & Cross-Linking</div>
           <div id="directText" style="max-height:80px; overflow:hidden; transition:max-height 0.3s;">${escapeHtml(directResponse)}</div>
           <button class="btn btn-secondary" style="margin-top:8px; padding:4px 12px; font-size:12px;" id="toggleDirect">Read More</button>
@@ -751,7 +766,7 @@
 
     results.forEach((r, idx) => {
       html += `
-        <div class="card" style="padding:16px; margin-bottom:12px; display:flex; gap:16px;">
+        <div class="result-entry">
           <div style="font-family:monospace; font-size:12px; color:var(--text-faint); width:30px;">${String(idx+1).padStart(3,'0')}</div>
           <div style="flex:1;">
             <a href="${escapeHtml(r.url)}" target="_blank" style="font-weight:600; color:var(--text); text-decoration:none;">${escapeHtml(r.title)}</a>
@@ -774,13 +789,11 @@
     }
 
     outputArea.innerHTML = html;
-
     bindToggle();
     document.getElementById('copyLinks')?.addEventListener('click', () => {
       const text = results.map(r => r.url).join('\n');
       navigator.clipboard.writeText(text).then(() => showToast('Links copied!', 1500));
     });
-
     document.querySelectorAll('[data-followup]').forEach(btn => {
       btn.addEventListener('click', () => {
         goalInput.value = btn.dataset.followup;
@@ -853,7 +866,6 @@
     } finally {
       stopTicker();
       runBtn.disabled = false;
-      // simple cooldown
       isCooldown = true;
       setTimeout(() => { isCooldown = false; }, 5000);
     }
