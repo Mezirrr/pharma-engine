@@ -1,5 +1,5 @@
 // Smart Fetch Wrapper with Timeout and Retry Logic
-async function fetchWithRetry(url, options = {}, retries = 2, timeoutMs = 5000) {
+async function fetchWithRetry(url, options = {}, retries = 2, timeoutMs = 8000) {
   for (let i = 0; i <= retries; i++) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -15,13 +15,12 @@ async function fetchWithRetry(url, options = {}, retries = 2, timeoutMs = 5000) 
       return response;
     } catch (error) {
       clearTimeout(timeoutId);
-      
       if (i === retries) {
         console.warn(`Request failed after ${retries} retries: ${url}`);
         throw error;
       }
-      
-      await new Promise(resolve => setTimeout(resolve, 500 * (i + 1)));
+      // Exponential backoff for retries
+      await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
     }
   }
 }
@@ -40,19 +39,19 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'No valid targets provided.' });
     }
 
-    const ncbiApiKey = process.env.NCBI_API_KEY ? `&api_key=${process.env.NCBI_API_KEY}` : '';
     const targetsHeading = targetsArray.join(', ');
+    const s2ApiKey = "s2k-zRgzPNUsqrylk6ST4j78YbPFDcq74woh6HR4Uawp"; // Consider moving to process.env.S2_API_KEY later
 
     // ==========================================
     // PHASE 1: Internal Pre-Enhancer
-    // Reframes vague inputs into elite search vectors in a single call
+    // Reframes vague inputs into optimized Semantic Scholar search strings
     // ==========================================
-    const enhancerSystemPrompt = `You are an elite biochemical intelligence engine. Optimize the user's inputs for literature retrieval.
+    const enhancerSystemPrompt = `You are an elite biochemical intelligence engine. Optimize the user's inputs for Semantic Scholar literature retrieval.
 Respond ONLY with JSON matching this schema:
 {
-  "enhancedGoal": "A hyper-technical reframing of the user's goal, expanding vague terms into specific mechanistic, enzymatic, or structural pathways (max 2 sentences).",
+  "enhancedGoal": "A hyper-technical reframing of the user's goal (max 2 sentences).",
   "optimizedQueries": {
-    "TargetName1": "PubMed query string using AND/OR, [MeSH Terms], and [Title/Abstract]",
+    "TargetName1": "Semantic keyword string (no complex boolean). E.g., 'TargetName mechanism of action pathway'",
     "TargetName2": "..."
   }
 }`;
@@ -89,71 +88,62 @@ Respond ONLY with JSON matching this schema:
     }
 
     // ==========================================
-    // PHASE 2: Concurrent PubMed Fetching
-    // Uses the optimized queries from Phase 1
+    // PHASE 2: Sequential Semantic Scholar Fetching (1 RPS Rate Limit Guard)
     // ==========================================
-    const targetResults = await Promise.all(targetsArray.map(async (singleTarget) => {
-      
-      // Map to the enhanced query, or fallback to a basic concatenation
-      let optimizedQuery = optimizedQueries[singleTarget];
-      if (!optimizedQuery) {
-        optimizedQuery = `${singleTarget} ${enhancedGoal}`.trim();
-      }
-
-      // 1. E-Search: Get PMIDs
-      let pubmedRes = await fetchWithRetry(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(optimizedQuery)}&retmode=json&retmax=15${ncbiApiKey}`, {}, 2, 6000);
-      let pubmedData = await pubmedRes.json();
-      let pmids = pubmedData.esearchresult?.idlist || [];
-
-      let localFallbackActive = false;
-      
-      // SMART FALLBACK: If the enhanced query was too strict, loosen it.
-      if (pmids.length === 0) {
-        localFallbackActive = true;
-        const fallbackQuery = `${singleTarget}[Title/Abstract]`.trim();
-        pubmedRes = await fetchWithRetry(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(fallbackQuery)}&retmode=json&retmax=15${ncbiApiKey}`, {}, 2, 6000);
-        pubmedData = await pubmedRes.json();
-        pmids = pubmedData.esearchresult?.idlist || [];
-      }
-
-      let mappedPapers = [];
-      
-      // 2. E-Fetch: Get abstracts based on PMIDs
-      if (pmids.length > 0) {
-        const fetchRes = await fetchWithRetry(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${pmids.join(',')}&retmode=xml${ncbiApiKey}`, {}, 2, 6000);
-        const xmlText = await fetchRes.text();
-
-        const articles = xmlText.split('<PubmedArticle>');
-        articles.shift(); 
-
-        mappedPapers = articles.map(article => {
-          const titleMatch = article.match(/<ArticleTitle[^>]*>(.*?)<\/ArticleTitle>/);
-          const yearMatch = article.match(/<PubDate>[\s\S]*?<Year>(.*?)<\/Year>[\s\S]*?<\/PubDate>/) || article.match(/<MedlineDate>(.*?)<\/MedlineDate>/);
-          const pmidMatch = article.match(/<PMID[^>]*>(.*?)<\/PMID>/);
-          
-          const abstractMatches = [...article.matchAll(/<AbstractText[^>]*>(.*?)<\/AbstractText>/gs)];
-          const fullAbstract = abstractMatches.map(m => m[1]).join(' ').replace(/<[^>]*>?/gm, '');
-
-          return {
-            title: titleMatch ? titleMatch[1] : 'Unknown Title',
-            url: pmidMatch ? `https://pubmed.ncbi.nlm.nih.gov/${pmidMatch[1]}/` : '',
-            year: yearMatch ? yearMatch[1] : 'Unknown',
-            abstract: fullAbstract ? fullAbstract.substring(0, 400) + '...' : 'No abstract available',
-            associatedTarget: singleTarget 
-          };
-        }).filter(p => p.url); 
-      }
-
-      return { mappedPapers, fallbackTriggered: localFallbackActive };
-    }));
-
     let allRealPapers = [];
     let fallbackTriggered = false;
 
-    for (const result of targetResults) {
-      allRealPapers.push(...result.mappedPapers);
-      if (result.fallbackTriggered) {
-        fallbackTriggered = true;
+    // We MUST use a standard for-loop here to await the delay between iterations
+    for (let i = 0; i < targetsArray.length; i++) {
+      const singleTarget = targetsArray[i];
+      
+      // Delay to respect 1 RPS limit (Wait 1.2 seconds if not the first request)
+      if (i > 0) {
+        await new Promise(resolve => setTimeout(resolve, 1200)); 
+      }
+
+      let optimizedQuery = optimizedQueries[singleTarget] || `${singleTarget} ${enhancedGoal}`.trim();
+      let s2Url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(optimizedQuery)}&limit=15&fields=paperId,title,url,year,abstract,authors`;
+
+      try {
+        let s2Res = await fetchWithRetry(s2Url, {
+          headers: { 'x-api-key': s2ApiKey }
+        }, 1, 6000);
+        
+        let s2Data = await s2Res.json();
+        let papers = s2Data.data || [];
+
+        // SMART FALLBACK: If query was too strict, loosen it.
+        if (papers.length === 0) {
+          fallbackTriggered = true;
+          // Must wait again before firing the fallback to respect the 1 RPS limit
+          await new Promise(resolve => setTimeout(resolve, 1200)); 
+          
+          const fallbackQuery = singleTarget;
+          const fallbackUrl = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(fallbackQuery)}&limit=15&fields=paperId,title,url,year,abstract`;
+          
+          s2Res = await fetchWithRetry(fallbackUrl, {
+            headers: { 'x-api-key': s2ApiKey }
+          }, 1, 6000);
+          
+          s2Data = await s2Res.json();
+          papers = s2Data.data || [];
+        }
+
+        // Map Semantic Scholar payload to our standardized schema
+        const mappedPapers = papers.map(p => ({
+          title: p.title || 'Unknown Title',
+          // S2 sometimes leaves URL null, so we build it dynamically using the paperId
+          url: p.url || (p.paperId ? `https://www.semanticscholar.org/paper/${p.paperId}` : ''),
+          year: p.year || 'Unknown',
+          abstract: p.abstract ? p.abstract.substring(0, 400) + '...' : 'No abstract available',
+          associatedTarget: singleTarget 
+        })).filter(p => p.url);
+
+        allRealPapers.push(...mappedPapers);
+
+      } catch (err) {
+        console.warn(`Semantic Scholar fetch failed for target: ${singleTarget}`, err.message);
       }
     }
 
@@ -173,9 +163,7 @@ Your task is:
 1. Under "directResponse", provide a hyper-analytical, flawlessly logical 130-IQ synthesis explaining the conceptual, structural, biochemical, or clinical connection between the user's targets (${targetsHeading}) and their discovery goal.
    - Strike an authoritative, deeply academic, and highly technical tone. Avoid fluff, unnecessary introductory pleasantries, and thesaurus-bloat.
    - Map out explicit synergistic actions, shared metabolic pathways, or direct ligand-receptor convergence points.
-   - Trace cross-talk, competing mechanisms, receptor saturation, and counter-regulatory loops.
    - Detail the exact molecular mechanisms behind any combined toxicities or emergent pharmacological properties.
-   - If the provided papers are irrelevant or empty, state this clearly, but STILL provide your best theoretical analysis based on your internal knowledge base.
 2. Under "followUpOptions", provide exactly 3 deeply analytical, highly insightful follow-up questions (strings) investigating cascading enzymatic steps or structural affinities. Max 12 words each.
 3. Select the top relevant papers (up to 15). 
    - Write a strict max 18-word "relevance" explanation for each, explicitly linking its findings to the target matrix.
@@ -189,7 +177,7 @@ Respond with ONLY raw JSON matching exactly this schema:
     {
       "title": "string",
       "url": "string",
-      "source": "PubMed",
+      "source": "Semantic Scholar",
       "year": "string",
       "relevance": "string",
       "studyType": "In Vitro | In Vivo | Human"
@@ -197,7 +185,6 @@ Respond with ONLY raw JSON matching exactly this schema:
   ]
 }`;
 
-    // Note that we are passing the internal "Enhanced Context" here to ground the synthesis.
     const userPrompt = `Target type: ${typeLabel || 'unspecified'}
 All Inputs Requested: ${targetsHeading}
 Original Goal: ${goal || 'General info'}
@@ -230,6 +217,11 @@ Filter and return the JSON.`;
     
     const finalJson = JSON.parse(text);
     finalJson.isFallback = fallbackTriggered;
+
+    // Explicitly enforce the source naming for UI rendering
+    if (finalJson.results && Array.isArray(finalJson.results)) {
+      finalJson.results.forEach(res => { res.source = "Semantic Scholar"; });
+    }
 
     res.status(200).json(finalJson);
 
