@@ -496,6 +496,22 @@
       cursor: pointer;
     }
 
+    .comparison-table {
+      margin-top: 20px;
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 13px;
+    }
+    .comparison-table th, .comparison-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+    .comparison-table th {
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
     .sci-hub-link {
       font-size: 13px;
       color: var(--text-faint);
@@ -671,8 +687,9 @@
           </div>
 
           <div class="upgrade-card" id="upgradeSection">
-            <div class="upgrade-title">⚡ Access More</div>
+            <div class="upgrade-title">⚡ Choose Your Plan</div>
             <div id="tierOptions"></div>
+            <div id="comparisonTable" style="margin-top:20px;"></div>
             <div class="free-downgrade" id="freeDowngrade" style="display:none;">
               <a id="downgradeToFree">Switch to Free plan</a>
             </div>
@@ -732,11 +749,12 @@
         'Lab Rat': 'https://pay.boomfi.xyz/3FrmBAuXkpfulxXGcgiaQSvTelI'
       };
 
+      // Updated tier metadata: removed tokens, added depth description
       const TIER_META = {
-        Free:       { runs: '3',   tokens: '5,000',  price: '$0',     desc: 'Basic access',               features: [] },
-        Starter:    { runs: '50',  tokens: '7,500',  price: '$9.99',  desc: '1.5× processing power',      features: [] },
-        Researcher: { runs: '200', tokens: '10,000', price: '$24.99', desc: '2× processing power',        features: ['Export to CSV/PDF', 'History (30 days)'] },
-        'Lab Rat':  { runs: 'Unlimited',   tokens: '15,000', price: '$49.99', desc: '3× processing power',        features: ['Bulk CSV upload', 'History (180 days)'] }
+        Free:       { assays: '3',   depth: 'Standard',   price: '$0',     desc: 'Basic analysis',               export: false, history: '–', bulk: false },
+        Starter:    { assays: '50',  depth: 'Enhanced',   price: '$9.99',  desc: 'Deeper research outputs',       export: false, history: '–', bulk: false },
+        Researcher: { assays: '200', depth: 'Deep',       price: '$24.99', desc: 'Advanced synthesis',            export: true,  history: '30 days', bulk: false },
+        'Lab Rat':  { assays: '∞',   depth: 'Maximum',    price: '$49.99', desc: 'Full analytical power',         export: true,  history: '180 days', bulk: true }
       };
 
       const TIER_LIMITS = { Free: 3, Starter: 50, Researcher: 200, 'Lab Rat': 999999 };
@@ -806,38 +824,60 @@
         document.getElementById('profileAuthView').style.display = isLoggedIn ? 'none' : 'block';
       }
 
+      // Build comparison table
+      function renderComparisonTable() {
+        const container = document.getElementById('comparisonTable');
+        if (!container) return;
+        const tiers = ['Free', 'Starter', 'Researcher', 'Lab Rat'];
+        let html = `<table class="comparison-table"><thead><tr><th></th>${tiers.map(t => `<th>${t}</th>`).join('')}</tr></thead><tbody>`;
+        // Assays
+        html += `<tr><td>Assays/month</td>${tiers.map(t => `<td>${TIER_META[t].assays}</td>`).join('')}</tr>`;
+        // Depth
+        html += `<tr><td>Analysis depth</td>${tiers.map(t => `<td>${TIER_META[t].depth}</td>`).join('')}</tr>`;
+        // Export
+        html += `<tr><td>Export CSV/PDF</td>${tiers.map(t => `<td>${TIER_META[t].export ? '✓' : '–'}</td>`).join('')}</tr>`;
+        // History
+        html += `<tr><td>History retention</td>${tiers.map(t => `<td>${TIER_META[t].history}</td>`).join('')}</tr>`;
+        // Bulk upload
+        html += `<tr><td>Bulk upload</td>${tiers.map(t => `<td>${TIER_META[t].bulk ? '✓' : '–'}</td>`).join('')}</tr>`;
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+      }
+
       function renderTierOptions(currentTier) {
         const container = document.getElementById('tierOptions');
         const freeDowngrade = document.getElementById('freeDowngrade');
         if (!container) return;
 
-        const paidTiers = ['Starter', 'Researcher', 'Lab Rat'];
+        const tiers = ['Free', 'Starter', 'Researcher', 'Lab Rat'];
         let html = '';
-        paidTiers.forEach(tier => {
+        tiers.forEach(tier => {
           const meta = TIER_META[tier];
           const isCurrent = currentTier === tier;
+          const isFree = tier === 'Free';
           html += `
             <div class="tier-option ${isCurrent ? 'current' : ''}">
               <div class="tier-info">
                 <div class="tier-name">${tier}</div>
-                <div class="tier-desc">${meta.desc} · ${meta.runs} runs/month · ${meta.tokens} max tokens</div>
-                ${meta.features.length ? '<div class="tier-desc" style="margin-top:4px;">' + meta.features.join(' · ') + '</div>' : ''}
+                <div class="tier-desc">${meta.desc} · ${meta.assays} assays/month · ${meta.depth} analysis</div>
               </div>
               <div style="text-align:right; flex-shrink:0; margin-left:16px;">
                 <div class="tier-price">${meta.price}/mo</div>
-                ${!isCurrent ? `<button class="btn btn-primary btn-sm upgrade-btn" data-tier="${tier}">Upgrade</button>` : '<span class="current-badge">Current</span>'}
+                ${!isCurrent && !isFree ? `<button class="btn btn-primary btn-sm upgrade-btn" data-tier="${tier}">Upgrade</button>` : (isCurrent ? '<span class="current-badge">Current</span>' : '')}
               </div>
             </div>
           `;
         });
         container.innerHTML = html;
 
+        // Show Free downgrade link if not on free
         if (currentTier !== 'Free') {
           freeDowngrade.style.display = 'block';
         } else {
           freeDowngrade.style.display = 'none';
         }
 
+        // Upgrade buttons
         container.querySelectorAll('.upgrade-btn').forEach(btn => {
           btn.addEventListener('click', () => {
             const tier = btn.dataset.tier;
@@ -849,10 +889,10 @@
           });
         });
 
+        // Downgrade to Free
         document.getElementById('downgradeToFree').addEventListener('click', async () => {
           if (!currentUser) return;
-          if (!confirm('Are you sure? You will lose all your current plan benefits (more runs, higher tokens, extra features).')) return;
-
+          if (!confirm('Are you sure? You will lose all your current plan benefits.')) return;
           const session = await getSession();
           if (!session) return showToast('Please log in again.');
           try {
@@ -907,6 +947,7 @@
           if (limitEl) limitEl.textContent = limit === 999999 ? '∞' : limit;
 
           renderTierOptions(tier);
+          renderComparisonTable();   // show the feature table
 
           if (lastTier && lastTier !== tier && (tier === 'Starter' || tier === 'Researcher' || tier === 'Lab Rat')) {
             confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
@@ -1060,9 +1101,7 @@
         return d.innerHTML;
       }
 
-      // Parse **bold** into <strong> tags while escaping the rest
       function parseBold(text) {
-        // Split by the ** markers, escaping each piece and wrapping bold parts in <strong>
         const parts = text.split(/(\*\*.*?\*\*)/g);
         return parts.map(part => {
           if (part.startsWith('**') && part.endsWith('**')) {
@@ -1073,13 +1112,11 @@
         }).join('');
       }
 
-      // Typewriter that handles HTML tags (preserves them as whole tokens)
       function typeWriter(el, html, speed, callback) {
         let i = 0;
         el.innerHTML = '';
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = html;
-        // Flatten the DOM to a string of characters and tags
         const tokens = [];
         function tokenize(node) {
           if (node.nodeType === Node.TEXT_NODE) {
@@ -1090,7 +1127,6 @@
             tokens.push(node.outerHTML);
           }
         }
-        // Walk the child nodes
         const walker = document.createTreeWalker(tempDiv, NodeFilter.SHOW_ALL);
         while (walker.nextNode()) {
           tokenize(walker.currentNode);
@@ -1100,10 +1136,8 @@
           if (i < tokens.length) {
             const token = tokens[i];
             if (token.startsWith('<')) {
-              // It's an HTML tag – insert as a whole chunk without escaping
               el.innerHTML += token;
               i++;
-              // Skip the subtree content that is already inside the tag? No, the token is the whole tag, so we're good.
               setTimeout(type, speed);
             } else {
               el.innerHTML += token;
@@ -1211,7 +1245,7 @@
           toggleBtn.addEventListener('click', () => {
             const expanded = directText.style.maxHeight === 'none';
             directText.style.maxHeight = expanded ? '80px' : 'none';
-            toggleBtn.textContent = expanded ? 'Read More' : 'Read Less';
+            toggleBtn.textContent = expanded ? 'Collapse' : 'Read More';
           });
         }
       }
