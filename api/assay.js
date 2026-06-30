@@ -35,7 +35,6 @@ function currentPeriod() {
 }
 
 async function maybeUpdateResearcherProfile(userId, newSearchCount) {
-  // ... (unchanged, but now with error logging)
   if (newSearchCount % PROFILE_SYNTHESIS_EVERY !== 0) return;
 
   const { data: recent } = await supabaseAdmin
@@ -79,11 +78,8 @@ async function maybeUpdateResearcherProfile(userId, newSearchCount) {
   }
 }
 
-// Helper to extract JSON from a string that might contain markdown fences
 function extractJSON(str) {
-  // Remove possible markdown code fences
   let cleaned = str.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-  // Find the outermost { ... }
   const firstBrace = cleaned.indexOf('{');
   const lastBrace = cleaned.lastIndexOf('}');
   if (firstBrace === -1 || lastBrace === -1) throw new Error('No JSON braces found');
@@ -91,7 +87,6 @@ function extractJSON(str) {
 }
 
 export default async function handler(req, res) {
-  // ---------------------------- LOGGING HEADER ----------------------------
   const requestId = Math.random().toString(36).slice(2, 8);
   console.log(`[${requestId}] Incoming assay request`);
 
@@ -124,7 +119,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Authentication service error.' });
   }
 
-  // 2. Profile lookup
+  // 2. Profile lookup (with auto-creation if missing)
   let profile;
   try {
     const { data, error: profileError } = await supabaseAdmin
@@ -132,11 +127,35 @@ export default async function handler(req, res) {
       .select('*')
       .eq('id', user.id)
       .single();
-    if (profileError || !data) {
-      console.error(`[${requestId}] Profile missing:`, profileError);
-      return res.status(403).json({ error: 'Profile not found.' });
+
+    if (profileError && profileError.code === 'PGRST116') {
+      // Profile row doesn't exist – create one
+      console.log(`[${requestId}] Profile missing, creating default Free profile.`);
+      await supabaseAdmin.from('profiles').insert({
+        id: user.id,
+        email: user.email,
+        tier: 'Free',
+        assays_used_this_month: 0,
+        usage_period: currentPeriod(),
+        search_count: 0
+      });
+      // Re-fetch after creation
+      const { data: newProfile, error: newProfileError } = await supabaseAdmin
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (newProfileError || !newProfile) {
+        console.error(`[${requestId}] Failed to create profile:`, newProfileError);
+        return res.status(500).json({ error: 'Failed to initialize user profile.' });
+      }
+      profile = newProfile;
+    } else if (profileError || !profile) {
+      console.error(`[${requestId}] Profile fetch error:`, profileError);
+      return res.status(500).json({ error: 'Failed to fetch profile.' });
+    } else {
+      profile = profile;
     }
-    profile = data;
     console.log(`[${requestId}] Profile loaded – tier: ${profile.tier}, used: ${profile.assays_used_this_month}`);
   } catch (e) {
     console.error(`[${requestId}] Profile fetch exception:`, e);
@@ -223,7 +242,6 @@ export default async function handler(req, res) {
       }
     } catch (e) {
       console.error(`[${requestId}] Enhancer network error:`, e.message);
-      // Continue with defaults
     }
 
     // ===================== PHASE 2: Semantic Scholar =====================
