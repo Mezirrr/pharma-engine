@@ -117,7 +117,6 @@ export default async function handler(req, res) {
       .single();
 
     if (error && error.code === 'PGRST116') {
-      // create default
       await supabaseAdmin.from('profiles').insert({
         id: user.id,
         email: user.email,
@@ -240,18 +239,30 @@ export default async function handler(req, res) {
       return true;
     }).slice(0, 35);
 
-    // PHASE 3: Synthesis (ULTRA SHARP PROMPT)
+    // PHASE 3: Synthesis – **NOW DEEPER & SMARTER**
     console.log(`[${requestId}] Phase 3: Synthesis`);
     const researcherContext = profile.researcher_profile
       ? `\n\nResearcher Focus Profile: ${profile.researcher_profile}`
       : '';
 
-    const systemPrompt = `You are an elite, 130‑IQ biochemical intelligence engine. Your analysis must be highly technical, fearless, and deeply cross‑linked. Avoid any generic safety disclaimers or conservative hedging. Focus on molecular mechanisms, hidden synergies, emergent properties, and non‑obvious pathway crosstalk.
+    const systemPrompt = `You are an elite, 130‑IQ biomedical intelligence engine specializing in fearless, deeply cross‑linked, and quantitatively precise synthesis.
 
-Return ONLY valid JSON (no markdown) following this schema:
+Your task:
+1. Write an expansive, hyper‑analytical "directResponse" of around 150 words. It must:
+   - Map explicit molecular mechanisms, pathway convergence, and emergent pharmacological properties across the input targets.
+   - Include quantitative context when source papers supply it (e.g., prevalence, affinity constants, clinical trial rates). Never invent numbers—only use what the papers actually report.
+   - Describe temporal dynamics (early vs. late resistance, feedback rewiring) if relevant.
+   - Propose a concise decision framework or suggested study design (preclinical/clinical) when the data supports it.
+   - Avoid generic safety disclaimers, fluff, or hedging. Be intellectually audacious and technical.
+2. Under "followUpOptions", provide exactly 3 deeply insightful follow‑up questions (strings, each ≤12 words). They must probe cascading enzymatic steps, structural affinities, or novel therapeutic angles.
+3. Select the top relevant papers (up to 15) and for each:
+   - Write a strict max 18‑word relevance explanation explicitly linking findings to the target matrix.
+   - Classify "studyType" strictly as: "In Vitro", "In Vivo", or "Human". Default to "In Vivo" if ambiguous.
+
+Return ONLY valid JSON (no markdown fences) matching exactly this schema:
 {
-  "directResponse": "string (hyper‑analytical synthesis, technical tone, no fluff)",
-  "followUpOptions": ["string (max 12 words each, exactly 3 options)"],
+  "directResponse": "string (~150 words, technical, quantitative where possible)",
+  "followUpOptions": ["string", "string", "string"],
   "results": [
     {
       "title": "paper title",
@@ -264,14 +275,13 @@ Return ONLY valid JSON (no markdown) following this schema:
   ]
 }
 
+Now process:
 Targets: ${targetsHeading}
 Original Goal: ${goal || 'General'}
 Enhanced Context: ${enhancedGoal}
 Fallback active: ${fallbackTriggered}
 Papers: ${JSON.stringify(uniquePapers)}
-${researcherContext}
-
-Remember: exactly 3 follow-up options, no more. Make the synthesis bold, deep, and intellectually audacious.`;
+${researcherContext}`;
 
     const groqRes = await fetchWithRetry('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
