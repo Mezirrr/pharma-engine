@@ -6,7 +6,7 @@ const TIER_LIMITS = {
   Free: 3,
   Starter: 50,
   Researcher: 200,
-  'Lab Rat': 999999   // effectively unlimited
+  'Lab Rat': 999999
 };
 
 const TIER_MAX_TOKENS = {
@@ -123,7 +123,6 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Invalid session.' });
   }
 
-  // ---------- Profile ----------
   let profile;
   try {
     const { data, error } = await supabaseAdmin
@@ -153,7 +152,6 @@ export default async function handler(req, res) {
       profile = data;
     }
 
-    // Super user always gets Lab Rat
     if (user.email === 'mezirrr@protonmail.com') {
       if (profile.tier !== 'Lab Rat') {
         console.log(`[${rid}] Super user detected – upgrading to Lab Rat`);
@@ -174,11 +172,9 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Profile service error.' });
   }
 
-  // ---------- Tier limits ----------
   const period = currentPeriod();
   const used = profile.usage_period === period ? profile.assays_used_this_month : 0;
   const limit = TIER_LIMITS[profile.tier] ?? TIER_LIMITS.Free;
-  console.log(`[${rid}] Usage: ${used}/${limit}`);
   if (used >= limit) {
     return res.status(403).json({
       error: `Monthly limit reached (${profile.tier}: ${limit}). Please upgrade to continue.`
@@ -254,7 +250,6 @@ export default async function handler(req, res) {
       for (let qi = 0; qi < queries.length; qi++) {
         if (qi > 0) await new Promise(r => setTimeout(r, 1200));
         const query = queries[qi];
-        console.log(`[${rid}] S2 query ${qi + 1}/${queries.length} for "${target}": "${query}"`);
         const url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(query)}&limit=10&fields=paperId,title,url,year,abstract`;
         try {
           const s2Res = await fetchWithRetry(url, { headers: { 'x-api-key': s2ApiKey } }, 1, 6000);
@@ -277,13 +272,11 @@ export default async function handler(req, res) {
       }
       if (targetPapers.length === 0) {
         fallbackTriggered = true;
-        console.log(`[${rid}] All queries failed for "${target}", marking fallback.`);
       }
       allPapers.push(...targetPapers);
     }
 
     if (allPapers.length === 0) {
-      console.log(`[${rid}] Phase 2b: Last-ditch`);
       try {
         const lastRes = await fetchWithRetry('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
@@ -299,7 +292,6 @@ export default async function handler(req, res) {
         const lastData = await lastRes.json();
         let lastQuery = lastData?.choices?.[0]?.message?.content?.trim();
         if (lastQuery && lastQuery.length > 3) {
-          console.log(`[${rid}] Last-ditch query: "${lastQuery}"`);
           await new Promise(r => setTimeout(r, 1200));
           const url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(lastQuery)}&limit=10&fields=paperId,title,url,year,abstract`;
           const s2Res = await fetchWithRetry(url, { headers: { 'x-api-key': s2ApiKey } }, 1, 6000);
@@ -325,7 +317,6 @@ export default async function handler(req, res) {
       seen.add(p.url);
       return true;
     }).slice(0, 35);
-    console.log(`[${rid}] Total unique papers: ${uniquePapers.length}`);
 
     // ================== PHASE 3: SYNTHESIS ==================
     const researcherContext = profile.researcher_profile
@@ -335,7 +326,7 @@ export default async function handler(req, res) {
     const systemPrompt = `You are a 130-IQ elite biochemical intelligence engine specializing in cross-disciplinary synthesis and non-obvious mechanistic cross-linking.
 
 Your task:
-1. Under "directResponse", provide a hyper-analytical, flawlessly logical 130-IQ synthesis explaining the connection between the targets (${targetsHeading}) and the discovery goal. Use your extensive biomedical knowledge to deliver a thorough mechanistic analysis. Only incorporate paper details when they genuinely support the argument.
+1. Under "directResponse", provide a hyper-analytical, flawlessly logical 130-IQ synthesis explaining the connection between the targets (${targetsHeading}) and the discovery goal. **Open with the single most clinically or mechanistically important headline statement in bold, then elaborate with deep molecular detail.** Use your extensive biomedical knowledge to deliver a thorough mechanistic analysis. Only incorporate paper details when they genuinely support the argument.
 2. Under "followUpOptions", give exactly 3 deep, insightful follow-up questions (≤12 words each).
 3. Under "results", include ALL papers from the supplied list that are even loosely relevant to the topic. Do not discard papers unless they are completely unrelated. For each paper:
    - Write a ≤18-word relevance explanation linking the paper to the query.
@@ -376,21 +367,18 @@ Filter and return the JSON.`;
     const groqData = await groqRes.json();
     const rawText = groqData.choices[0].message.content;
     console.log(`[${rid}] Groq raw (first 300):`, rawText.slice(0, 300));
-    console.log(`[${rid}] Groq raw length:`, rawText.length);
 
     let finalJson;
     try {
       finalJson = extractJSON(rawText);
     } catch (e) {
       console.error(`[${rid}] JSON parse failed:`, e.message);
-      console.error(`[${rid}] Full:`, rawText);
       return res.status(500).json({ error: 'AI returned invalid format.' });
     }
 
     finalJson.isFallback = fallbackTriggered;
     if (finalJson.results) finalJson.results.forEach(r => r.source = 'Semantic Scholar');
 
-    // ---------- Update usage ----------
     const usedNow = (profile.usage_period === period ? profile.assays_used_this_month : 0) + 1;
     const newCount = (profile.search_count || 0) + 1;
 
@@ -406,7 +394,6 @@ Filter and return the JSON.`;
       goal_input: goal
     }]);
 
-    // Non‑blocking profile synthesis – no longer slows down the response
     maybeUpdateResearcherProfile(user.id, newCount);
 
     return res.status(200).json(finalJson);
