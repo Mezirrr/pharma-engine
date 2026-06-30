@@ -249,22 +249,20 @@
       width: 32px;
       height: 32px;
       border-radius: 8px;
-      background: var(--surface);
-      border: 1px solid var(--border);
+      background: transparent;
+      border: none;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 18px;
-      color: var(--text-secondary);
+      color: var(--text);              /* black in light, white in dark */
       transition: all 0.2s;
-      box-shadow: var(--shadow-sm);
+      box-shadow: none;
     }
     .optimize-btn:hover {
-      background: var(--accent-soft);
+      transform: scale(1.2);
       color: var(--accent);
-      border-color: var(--accent);
-      transform: scale(1.1);
     }
 
     .pills {
@@ -680,7 +678,6 @@
       let isCooldown = false;
       let lastTier = localStorage.getItem('pharma_lastTier') || '';
 
-      // DOM
       const assayPage = document.getElementById('assayPage');
       const profilePage = document.getElementById('profilePage');
       const toast = document.getElementById('toast');
@@ -776,7 +773,6 @@
           }
           localStorage.setItem('pharma_lastTier', tier);
 
-          // Chart
           const chartDiv = document.getElementById('usageChart');
           if (chartDiv) {
             chartDiv.innerHTML = '';
@@ -807,7 +803,6 @@
         await updateProfileUI();
       });
 
-      // Auth events
       document.getElementById('signupBtn').addEventListener('click', async () => {
         const name = document.getElementById('authName').value.trim();
         const email = document.getElementById('authEmail').value.trim();
@@ -853,7 +848,6 @@
         showAssay();
       });
 
-      // Upgrade buttons
       document.getElementById('upgradeMiniBtn').addEventListener('click', () => {
         if (!currentUser) return showToast('Please log in first.');
         const url = new URL(BOOMFI_MINI_LINK);
@@ -869,7 +863,7 @@
         location.href = url.toString();
       });
 
-      // Optimize goal button
+      // Optimize button
       optimizeGoalBtn.addEventListener('click', async () => {
         const rawGoal = goalInput.value.trim();
         if (!rawGoal) return;
@@ -891,7 +885,7 @@
         }
       });
 
-      // Assay logic
+      // Assay pills
       typePills.forEach(p => {
         p.addEventListener('click', () => {
           typePills.forEach(x => x.classList.remove('active'));
@@ -969,7 +963,7 @@
           outputArea.innerHTML = html;
           if (directResponse) {
             const directEl = document.getElementById('directText');
-            typeWriter(directEl, directResponse, 10);
+            typeWriter(directEl, directResponse, 3);   // 2.5x faster (3ms/char)
             bindToggle();
           }
           return;
@@ -1014,7 +1008,7 @@
 
         if (directResponse) {
           const directEl = document.getElementById('directText');
-          typeWriter(directEl, directResponse, 10);
+          typeWriter(directEl, directResponse, 3);   // 2.5x faster
           bindToggle();
         }
 
@@ -1098,7 +1092,7 @@
         }
       }
 
-      // Email confirm & share loading
+      // Email confirm & share
       window.addEventListener('load', async () => {
         const hash = location.hash;
         if (hash.includes('access_token')) {
@@ -1128,7 +1122,7 @@
         if (results?.length) {
           html += `<div style="margin-top:16px;"><span style="font-family:monospace; font-size:12px; color:var(--text-secondary);">${results.length} results</span></div>`;
           results.forEach((r,idx)=>{
-            html += `<div class="result-entry">... (abbreviated) ...</div>`; // simplified for space
+            html += `<div class="result-entry">... (abbreviated) ...</div>`;
           });
         }
         outputArea.innerHTML = html;
