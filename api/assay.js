@@ -202,7 +202,7 @@ Filter and return the JSON.`;
     const groqRes = await fetchWithRetry('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${process.env.GROQ_API_KEY}` },
-      body: JSON.stringify({ model:'openai/gpt-oss-120b', messages:[{role:'system',content:systemPrompt},{role:'user',content:userPrompt}], max_tokens:2500, temperature:0.4 })
+      body: JSON.stringify({ model:'openai/gpt-oss-120b', messages:[{role:'system',content:systemPrompt},{role:'user',content:userPrompt}], max_tokens:6000, temperature:0.5 })
     }, 2, 12000);
 
     const groqData = await groqRes.json();
