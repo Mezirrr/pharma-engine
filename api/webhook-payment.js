@@ -96,13 +96,14 @@ export default async function handler(req, res) {
   }
 
   let tier = null;
-  if (planReference && planReference === process.env.BOOMFI_MINI_PLAN_REFERENCE) tier = 'Mini';
-  if (planReference && planReference === process.env.BOOMFI_MAX_PLAN_REFERENCE) tier = 'Max';
+if (planReference && planReference === process.env.BOOMFI_MINI_PLAN_REFERENCE) tier = 'Mini';
+// Only match Max if you've actually defined the reference
+if (process.env.BOOMFI_MAX_PLAN_REFERENCE && planReference === process.env.BOOMFI_MAX_PLAN_REFERENCE) tier = 'Max';
 
-  if (!tier) {
-    console.warn('Webhook plan reference did not match a known tier:', planReference);
-    return res.status(200).json({ received: true, ignored: true });
-  }
+if (!tier) {
+  console.warn('Webhook plan reference did not match a known tier:', planReference);
+  return res.status(200).json({ received: true, ignored: true });
+}
 
   const { data: profile, error: lookupError } = await supabaseAdmin
     .from('profiles')
