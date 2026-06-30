@@ -746,15 +746,14 @@
       const PAYMENT_LINKS = {
         Starter: 'https://pay.boomfi.xyz/3FrlWsKwMDESJ1J2l5uSPsbuSFf',
         Researcher: 'https://pay.boomfi.xyz/3FrlvM7EoqGUji2WoRw1dkTHoJo',
-        'Lab Rat': 'https://pay.boomfi.xyz/3Frzg0EqdsbLzTCXDc7Lcsx3t2z'
+        'Lab Rat': 'https://pay.boomfi.xyz/3FrmBAuXkpfulxXGcgiaQSvTelI'
       };
 
-      // Updated tier metadata: removed tokens, added depth description
       const TIER_META = {
         Free:       { assays: '3',   depth: 'Standard',   price: '$0',     desc: 'Basic analysis',               export: false, history: '–', bulk: false },
         Starter:    { assays: '50',  depth: 'Enhanced',   price: '$9.99',  desc: 'Deeper research outputs',       export: false, history: '–', bulk: false },
         Researcher: { assays: '200', depth: 'Deep',       price: '$24.99', desc: 'Advanced synthesis',            export: true,  history: '30 days', bulk: false },
-        'Lab Rat':  { assays: '∞',   depth: 'Maximum',    price: '$39.99', desc: 'Full analytical power',         export: true,  history: '180 days', bulk: true }
+        'Lab Rat':  { assays: '∞',   depth: 'Maximum',    price: '$49.99', desc: 'Full analytical power',         export: true,  history: '180 days', bulk: true }
       };
 
       const TIER_LIMITS = { Free: 3, Starter: 50, Researcher: 200, 'Lab Rat': 999999 };
@@ -824,21 +823,15 @@
         document.getElementById('profileAuthView').style.display = isLoggedIn ? 'none' : 'block';
       }
 
-      // Build comparison table
       function renderComparisonTable() {
         const container = document.getElementById('comparisonTable');
         if (!container) return;
         const tiers = ['Free', 'Starter', 'Researcher', 'Lab Rat'];
         let html = `<table class="comparison-table"><thead><tr><th></th>${tiers.map(t => `<th>${t}</th>`).join('')}</tr></thead><tbody>`;
-        // Assays
         html += `<tr><td>Assays/month</td>${tiers.map(t => `<td>${TIER_META[t].assays}</td>`).join('')}</tr>`;
-        // Depth
         html += `<tr><td>Analysis depth</td>${tiers.map(t => `<td>${TIER_META[t].depth}</td>`).join('')}</tr>`;
-        // Export
         html += `<tr><td>Export CSV/PDF</td>${tiers.map(t => `<td>${TIER_META[t].export ? '✓' : '–'}</td>`).join('')}</tr>`;
-        // History
         html += `<tr><td>History retention</td>${tiers.map(t => `<td>${TIER_META[t].history}</td>`).join('')}</tr>`;
-        // Bulk upload
         html += `<tr><td>Bulk upload</td>${tiers.map(t => `<td>${TIER_META[t].bulk ? '✓' : '–'}</td>`).join('')}</tr>`;
         html += `</tbody></table>`;
         container.innerHTML = html;
@@ -870,14 +863,12 @@
         });
         container.innerHTML = html;
 
-        // Show Free downgrade link if not on free
         if (currentTier !== 'Free') {
           freeDowngrade.style.display = 'block';
         } else {
           freeDowngrade.style.display = 'none';
         }
 
-        // Upgrade buttons
         container.querySelectorAll('.upgrade-btn').forEach(btn => {
           btn.addEventListener('click', () => {
             const tier = btn.dataset.tier;
@@ -889,7 +880,6 @@
           });
         });
 
-        // Downgrade to Free
         document.getElementById('downgradeToFree').addEventListener('click', async () => {
           if (!currentUser) return;
           if (!confirm('Are you sure? You will lose all your current plan benefits.')) return;
@@ -947,7 +937,7 @@
           if (limitEl) limitEl.textContent = limit === 999999 ? '∞' : limit;
 
           renderTierOptions(tier);
-          renderComparisonTable();   // show the feature table
+          renderComparisonTable();
 
           if (lastTier && lastTier !== tier && (tier === 'Starter' || tier === 'Researcher' || tier === 'Lab Rat')) {
             confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
@@ -1101,8 +1091,15 @@
         return d.innerHTML;
       }
 
-      function parseBold(text) {
-        const parts = text.split(/(\*\*.*?\*\*)/g);
+      // Parse bold and also deduplicate repeated sentences
+      function prepareText(text) {
+        // Remove duplicate consecutive sentences (same sentence appearing twice in a row)
+        const sentences = text.match(/[^.!?]+[.!?]+(\s|$)/g) || [text];
+        let deduped = sentences.filter((s, i) => i === 0 || s.trim() !== sentences[i-1]?.trim()).join('');
+        if (!deduped) deduped = text;
+        
+        // Now convert **bold** to <strong>
+        const parts = deduped.split(/(\*\*.*?\*\*)/g);
         return parts.map(part => {
           if (part.startsWith('**') && part.endsWith('**')) {
             return '<strong>' + escapeHtml(part.slice(2, -2)) + '</strong>';
@@ -1167,7 +1164,7 @@
           outputArea.innerHTML = html;
           if (directResponse) {
             const directEl = document.getElementById('directText');
-            typeWriter(directEl, parseBold(directResponse), 3);
+            typeWriter(directEl, prepareText(directResponse), 3);
             bindToggle();
           }
           return;
@@ -1212,7 +1209,7 @@
 
         if (directResponse) {
           const directEl = document.getElementById('directText');
-          typeWriter(directEl, parseBold(directResponse), 3);
+          typeWriter(directEl, prepareText(directResponse), 3);
           bindToggle();
         }
 
@@ -1321,7 +1318,7 @@
 
       function renderSharedReport(dr, results) {
         let html = '';
-        if (dr) html += `<div class="card" style="border-left:4px solid var(--accent);"><div class="label" style="color:var(--accent);">Shared Report</div><div>${parseBold(dr)}</div></div>`;
+        if (dr) html += `<div class="card" style="border-left:4px solid var(--accent);"><div class="label" style="color:var(--accent);">Shared Report</div><div>${prepareText(dr)}</div></div>`;
         if (results?.length) {
           html += `<div style="margin-top:16px;"><span style="font-family:monospace; font-size:12px; color:var(--text-secondary);">${results.length} results</span></div>`;
           results.forEach((r,idx)=>{
