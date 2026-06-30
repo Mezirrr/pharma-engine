@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PharmaEngine</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700;800&display=swap');
 
@@ -34,6 +35,28 @@
       --transition-slow: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1.2);
     }
 
+    body.dark {
+      --bg: #0F172A;
+      --surface: #1E293B;
+      --surface-hover: #334155;
+      --border: #334155;
+      --primary: #FFFFFF;
+      --primary-soft: rgba(255,255,255,0.08);
+      --accent: #3B82F6;
+      --accent-soft: rgba(59,130,246,0.15);
+      --success: #10B981;
+      --success-soft: rgba(16,185,129,0.15);
+      --warning: #F59E0B;
+      --warning-soft: rgba(245,158,11,0.15);
+      --error: #EF4444;
+      --text: #F8FAFC;
+      --text-secondary: #CBD5E1;
+      --text-faint: #64748B;
+      --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.2);
+      --shadow-md: 0 8px 24px rgba(0,0,0,0.3);
+      --shadow-lg: 0 20px 40px rgba(0,0,0,0.4);
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
@@ -46,6 +69,27 @@
       flex-direction: column;
       align-items: center;
       overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Animated background gradient */
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at 20% 50%, rgba(37,99,235,0.03) 0%, transparent 50%),
+                  radial-gradient(ellipse at 80% 20%, rgba(5,150,105,0.03) 0%, transparent 50%),
+                  radial-gradient(ellipse at 50% 80%, rgba(217,119,6,0.03) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+      animation: gradientShift 20s ease-in-out infinite alternate;
+    }
+    @keyframes gradientShift {
+      0% { opacity: 0.7; transform: scale(1); }
+      100% { opacity: 1; transform: scale(1.05); }
     }
 
     .container {
@@ -54,6 +98,7 @@
       padding: 20px;
       margin-bottom: 80px;
       position: relative;
+      z-index: 1;
     }
 
     /* Header */
@@ -82,6 +127,32 @@
       border-radius: 50%;
       background: var(--success);
       box-shadow: 0 0 0 4px var(--success-soft);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .theme-toggle {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition-slow);
+      color: var(--text);
+    }
+    .theme-toggle:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px) scale(1.05);
     }
 
     .profile-btn {
@@ -121,7 +192,6 @@
       to { opacity: 1; transform: translateY(0) scale(1); }
     }
 
-    /* Card style */
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -152,7 +222,7 @@
 
     .input, .textarea {
       width: 100%;
-      background: #FAFAFA;
+      background: var(--surface-hover);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       padding: 12px 16px;
@@ -166,7 +236,7 @@
     }
     .input:focus, .textarea:focus {
       border-color: var(--accent);
-      background: white;
+      background: var(--surface);
       box-shadow: 0 0 0 4px var(--accent-soft);
     }
 
@@ -191,7 +261,7 @@
     .pill.active {
       background: var(--primary);
       border-color: var(--primary);
-      color: white;
+      color: var(--bg);
       box-shadow: 0 4px 12px rgba(15,23,42,0.2);
       transform: translateY(-1px);
     }
@@ -232,7 +302,7 @@
       font-family: 'IBM Plex Mono', monospace;
       font-size: 13px;
       color: var(--accent);
-      background: white;
+      background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       padding: 12px 16px;
@@ -242,6 +312,19 @@
       gap: 8px;
       box-shadow: var(--shadow-sm);
       animation: fadeSlide 0.2s ease;
+    }
+    .pulse-ring {
+      display: inline-block;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 0 rgba(37,99,235,0.4);
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(37,99,235,0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(37,99,235,0); }
+      100% { box-shadow: 0 0 0 0 rgba(37,99,235,0); }
     }
     .cursor {
       width: 6px; height: 16px;
@@ -256,7 +339,7 @@
       left: 50%;
       transform: translateX(-50%);
       background: var(--primary);
-      color: white;
+      color: var(--bg);
       padding: 14px 28px;
       border-radius: 40px;
       font-weight: 600;
@@ -271,7 +354,7 @@
       to { opacity: 1; transform: translateX(-50%) translateY(0); }
     }
 
-    /* Profile Page specific */
+    /* Profile */
     .profile-header {
       display: flex;
       align-items: center;
@@ -285,7 +368,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      color: white;
+      color: var(--bg);
       font-size: 28px;
       font-weight: 700;
       transition: transform var(--transition-slow);
@@ -300,7 +383,7 @@
       text-transform: uppercase;
       font-family: 'IBM Plex Mono', monospace;
     }
-    .tier-free { background: #E2E8F0; color: var(--text); }
+    .tier-free { background: var(--surface-hover); color: var(--text); }
     .tier-mini { background: var(--accent-soft); color: var(--accent); }
     .tier-max  { background: var(--success-soft); color: var(--success); }
 
@@ -311,7 +394,7 @@
     }
 
     .upgrade-card {
-      background: linear-gradient(135deg, #F0F4FF 0%, #FFFFFF 100%);
+      background: linear-gradient(135deg, var(--primary-soft) 0%, var(--surface) 100%);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       padding: 24px;
@@ -322,7 +405,7 @@
       font-size: 18px;
       font-weight: 700;
       margin-bottom: 8px;
-      color: var(--primary);
+      color: var(--text);
     }
     .upgrade-sub {
       font-size: 13px;
@@ -356,7 +439,6 @@
     }
     .back-link:hover { transform: translateX(-4px); }
 
-    /* Assay output tweaks */
     .result-entry {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -372,26 +454,83 @@
       box-shadow: var(--shadow-md);
       transform: translateY(-2px);
     }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--surface-hover);
+      color: var(--text-secondary);
+    }
+    .badge.in-vivo { background: #DCFCE7; color: #166534; }
+    .badge.in-vitro { background: #E0F2FE; color: #075985; }
+    .badge.human { background: #FEE2E2; color: #991B1B; }
+
+    .tooltip {
+      position: relative;
+      cursor: help;
+    }
+    .tooltip::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 125%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--primary);
+      color: var(--bg);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      white-space: normal;
+      max-width: 220px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 10;
+    }
+    .tooltip:hover::after {
+      opacity: 1;
+    }
+
+    .chart-bar {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      height: 40px;
+    }
+    .chart-bar div {
+      flex: 1;
+      background: var(--accent);
+      border-radius: 4px 4px 0 0;
+      min-height: 4px;
+    }
   </style>
 </head>
 <body>
-
   <div class="toast" id="toast"></div>
-
   <div class="container">
     <header class="app-header">
       <div class="logo"><span class="logo-dot"></span>By Mezir</div>
-      <button class="profile-btn" id="profileBtn">
-        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      </button>
+      <div class="header-actions">
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+          <svg id="themeIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+        <button class="profile-btn" id="profileBtn">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </button>
+      </div>
     </header>
 
-    <!-- Assay Page -->
     <div class="page active" id="assayPage">
       <div class="card">
         <h2 style="font-size:28px; font-weight:800; margin-bottom:6px; letter-spacing:-0.02em;">PharmaEngine</h2>
         <p style="color:var(--text-secondary); margin-bottom:24px;">Advanced biomedical cross-linking. Enter targets separated by commas to map receptor cross-talk, trace pathway convergence, and synthesize structured data across live literature.</p>
-
         <div class="field">
           <label class="label">Target(s)</label>
           <input class="input" id="targetInput" type="text" placeholder="e.g. HGH, Erdafitinib, Cardarine" />
@@ -414,7 +553,6 @@
           <button class="btn btn-secondary" id="clearBtn">Clear</button>
         </div>
       </div>
-
       <div id="statusArea"></div>
       <div id="outputArea">
         <div style="text-align:center; color:var(--text-faint); padding:40px; border:2px dashed var(--border); border-radius:var(--radius);">
@@ -423,7 +561,6 @@
       </div>
     </div>
 
-    <!-- Profile Page -->
     <div class="page" id="profilePage">
       <div class="card">
         <span class="back-link" id="backToAssay">← Back to Engine</span>
@@ -438,6 +575,11 @@
 
         <div class="usage-stat">
           Used <strong id="usedDisplay">0</strong> of <strong id="limitDisplay">10</strong> assays this month
+        </div>
+
+        <div style="margin: 24px 0;">
+          <div class="label">Assays last 7 days</div>
+          <div class="chart-bar" id="usageChart"></div>
         </div>
 
         <div class="upgrade-card">
@@ -460,417 +602,567 @@
     </div>
   </div>
 
-<script>
-(function() {
-  // =============================================
-  // SUPABASE INIT
-  // =============================================
-  const SUPABASE_URL = 'https://mbhkckspzqvozgoaggws.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iaGtja3NwenF2b3pnb2FnZ3dzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NzU1MzgsImV4cCI6MjA5ODM1MTUzOH0.CDlcgRAmiyMhA4d20xajUDLWHzWg4iG0NFyI_W-GizE';
-  const BOOMFI_MINI_LINK = 'https://pay.boomfi.xyz/3Fq6eeDBlzuJJkw6g2GAAke4pza';
-  const BOOMFI_MAX_LINK = 'https://pay.boomfi.xyz/3Fq6nVmwV2eAZi0R2mCOxjPjwkZ';
+  <script>
+    (function() {
+      const SUPABASE_URL = 'https://mbhkckspzqvozgoaggws.supabase.co';
+      const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iaGtja3NwenF2b3pnb2FnZ3dzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NzU1MzgsImV4cCI6MjA5ODM1MTUzOH0.CDlcgRAmiyMhA4d20xajUDLWHzWg4iG0NFyI_W-GizE';
+      const BOOMFI_MINI_LINK = 'https://pay.boomfi.xyz/3Fq6eeDBlzuJJkw6g2GAAke4pza';
+      const BOOMFI_MAX_LINK = 'https://pay.boomfi.xyz/3Fq6nVmwV2eAZi0R2mCOxjPjwkZ';
 
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  let currentUser = null;
+      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      let currentUser = null;
+      let isCooldown = false;
+      let lastTier = localStorage.getItem('pharma_lastTier') || '';
 
-  // DOM
-  const assayPage = document.getElementById('assayPage');
-  const profilePage = document.getElementById('profilePage');
-  const profileBtn = document.getElementById('profileBtn');
-  const backToAssay = document.getElementById('backToAssay');
-  const toast = document.getElementById('toast');
+      // DOM elements
+      const assayPage = document.getElementById('assayPage');
+      const profilePage = document.getElementById('profilePage');
+      const toast = document.getElementById('toast');
+      const targetInput = document.getElementById('targetInput');
+      const goalInput = document.getElementById('goalInput');
+      const typePills = document.querySelectorAll('#typePills .pill');
+      const runBtn = document.getElementById('runBtn');
+      const clearBtn = document.getElementById('clearBtn');
+      const statusArea = document.getElementById('statusArea');
+      const outputArea = document.getElementById('outputArea');
+      const themeToggle = document.getElementById('themeToggle');
+      const themeIcon = document.getElementById('themeIcon');
 
-  const targetInput = document.getElementById('targetInput');
-  const goalInput = document.getElementById('goalInput');
-  const typePills = document.querySelectorAll('#typePills .pill');
-  const runBtn = document.getElementById('runBtn');
-  const clearBtn = document.getElementById('clearBtn');
-  const statusArea = document.getElementById('statusArea');
-  const outputArea = document.getElementById('outputArea');
+      let selectedType = 'auto';
+      const TIER_LIMITS = { Free: 10, Mini: 250, Max: 750 };
 
-  const tierBadge = document.getElementById('tierBadge');
-  const usedDisplay = document.getElementById('usedDisplay');
-  const limitDisplay = document.getElementById('limitDisplay');
-  const profileNameDisplay = document.getElementById('profileNameDisplay');
-  const profileEmailDisplay = document.getElementById('profileEmailDisplay');
-  const avatarInitial = document.getElementById('avatarInitial');
+      // =============== Dark Mode ===============
+      function applyTheme(dark) {
+        if (dark) {
+          document.body.classList.add('dark');
+          themeIcon.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+        } else {
+          document.body.classList.remove('dark');
+          themeIcon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+        }
+      }
 
-  let selectedType = 'auto';
-  let isCooldown = false;
+      const savedTheme = localStorage.getItem('pharma_theme');
+      if (savedTheme === 'dark') {
+        applyTheme(true);
+      } else {
+        applyTheme(false);
+      }
 
-  const TIER_LIMITS = { Free: 10, Mini: 250, Max: 750 };
+      themeToggle.addEventListener('click', () => {
+        const isDark = document.body.classList.contains('dark');
+        applyTheme(!isDark);
+        localStorage.setItem('pharma_theme', isDark ? 'light' : 'dark');
+      });
 
-  function showToast(message, duration = 3000) {
-    toast.textContent = message;
-    toast.style.display = 'block';
-    setTimeout(() => { toast.style.display = 'none'; }, duration);
-  }
+      // =============== Toast ===============
+      function showToast(message, duration = 3000) {
+        toast.textContent = message;
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; }, duration);
+      }
 
-  function showAssay() {
-    assayPage.classList.add('active');
-    profilePage.classList.remove('active');
-  }
-  function showProfile() {
-    assayPage.classList.remove('active');
-    profilePage.classList.add('active');
-  }
+      // =============== Pages ===============
+      function showAssay() {
+        assayPage.classList.add('active');
+        profilePage.classList.remove('active');
+      }
+      function showProfile() {
+        assayPage.classList.remove('active');
+        profilePage.classList.add('active');
+      }
 
-  async function getSession() {
-    const { data: { session } } = await supabase.auth.getSession();
-    return session || null;
-  }
-  window.getPharmaEngineSession = getSession;
+      document.getElementById('backToAssay').addEventListener('click', showAssay);
 
-  async function updateProfileUI() {
-    const session = await getSession();
-    currentUser = session?.user || null;
+      // =============== Auth ===============
+      async function getSession() {
+        const { data: { session } } = await supabase.auth.getSession();
+        return session || null;
+      }
+      window.getPharmaEngineSession = getSession;
 
-    if (currentUser) {
-      profileBtn.classList.add('logged-in');
-      profileNameDisplay.textContent = currentUser.user_metadata?.full_name || 'Researcher';
-      profileEmailDisplay.textContent = currentUser.email;
-      avatarInitial.textContent = (currentUser.user_metadata?.full_name?.[0] || currentUser.email[0]).toUpperCase();
+      async function updateProfileUI() {
+        const session = await getSession();
+        currentUser = session?.user || null;
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('tier, assays_used_this_month, usage_period')
-        .eq('id', currentUser.id)
-        .single();
+        document.getElementById('profileBtn').classList.toggle('logged-in', !!currentUser);
+        const nameDisplay = document.getElementById('profileNameDisplay');
+        const emailDisplay = document.getElementById('profileEmailDisplay');
+        const avatar = document.getElementById('avatarInitial');
+        const tierBadge = document.getElementById('tierBadge');
+        const usedDisplay = document.getElementById('usedDisplay');
+        const limitDisplay = document.getElementById('limitDisplay');
 
-      const period = new Date().toISOString().slice(0, 7);
-      const used = (data && data.usage_period === period) ? (data.assays_used_this_month || 0) : 0;
-      const tier = data?.tier || 'Free';
-      const limit = TIER_LIMITS[tier] || 10;
+        if (currentUser) {
+          nameDisplay.textContent = currentUser.user_metadata?.full_name || 'Researcher';
+          emailDisplay.textContent = currentUser.email;
+          avatar.textContent = (currentUser.user_metadata?.full_name?.[0] || currentUser.email[0]).toUpperCase();
 
-      tierBadge.textContent = tier + ' Tier';
-      tierBadge.className = 'tier-badge tier-' + tier.toLowerCase();
-      usedDisplay.textContent = used;
-      limitDisplay.textContent = limit;
-    } else {
-      profileBtn.classList.remove('logged-in');
-      tierBadge.textContent = 'Free Tier';
-      tierBadge.className = 'tier-badge tier-free';
-      usedDisplay.textContent = '0';
-      limitDisplay.textContent = '10';
-      avatarInitial.textContent = '?';
-      profileNameDisplay.textContent = 'Not logged in';
-      profileEmailDisplay.textContent = '';
-    }
-  }
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('tier, assays_used_this_month, usage_period')
+            .eq('id', currentUser.id)
+            .single();
 
-  profileBtn.addEventListener('click', () => {
-    if (currentUser) {
-      showProfile();
-      updateProfileUI();
-    } else {
-      showProfile();
-      renderAuthForm();
-    }
-  });
+          const period = new Date().toISOString().slice(0, 7);
+          const used = (data && data.usage_period === period) ? (data.assays_used_this_month || 0) : 0;
+          const tier = data?.tier || 'Free';
+          const limit = TIER_LIMITS[tier] || 10;
 
-  backToAssay.addEventListener('click', showAssay);
+          tierBadge.textContent = tier + ' Tier';
+          tierBadge.className = 'tier-badge tier-' + tier.toLowerCase();
+          usedDisplay.textContent = used;
+          limitDisplay.textContent = limit;
 
-  function renderAuthForm() {
-    profilePage.innerHTML = `
-      <div class="card">
-        <span class="back-link" id="backToAssayAuth">← Back to Engine</span>
-        <h2 style="font-size:22px; margin-bottom:20px;">System Access</h2>
-        <div id="authError" style="color:var(--error); margin-bottom:12px; display:none;"></div>
-        <div class="field" id="nameField">
-          <label class="label">Name (sign up only)</label>
-          <input class="input" id="authName" type="text" placeholder="Jane Researcher" />
-        </div>
-        <div class="field">
-          <label class="label">Email</label>
-          <input class="input" id="authEmail" type="email" placeholder="researcher@lab.com" />
-        </div>
-        <div class="field">
-          <label class="label">Password</label>
-          <input class="input" id="authPassword" type="password" placeholder="••••••••" />
-        </div>
-        <button class="btn btn-primary" style="width:100%; margin-bottom:12px;" id="loginBtn">Log In</button>
-        <button class="btn btn-secondary" style="width:100%;" id="signupBtn">Sign Up</button>
-      </div>`;
+          // Confetti on upgrade detection
+          if (lastTier && lastTier !== tier && (tier === 'Mini' || tier === 'Max')) {
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            showToast('🎉 Thanks for upgrading!', 4000);
+          }
+          localStorage.setItem('pharma_lastTier', tier);
 
-    document.getElementById('backToAssayAuth').addEventListener('click', showAssay);
+          // Fetch usage graph (last 7 days)
+          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+          const { data: history } = await supabase
+            .from('search_history')
+            .select('created_at')
+            .eq('user_id', currentUser.id)
+            .gte('created_at', sevenDaysAgo)
+            .order('created_at', { ascending: true });
 
-    document.getElementById('signupBtn').addEventListener('click', async () => {
-      const name = document.getElementById('authName').value.trim();
-      const email = document.getElementById('authEmail').value.trim();
-      const password = document.getElementById('authPassword').value;
-      const authErrorEl = document.getElementById('authError');
-      authErrorEl.style.display = 'none';
+          const chartDiv = document.getElementById('usageChart');
+          chartDiv.innerHTML = '';
+          const days = [];
+          for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            days.push(d.toISOString().slice(0, 10));
+          }
+          const counts = days.map(day => {
+            return history ? history.filter(h => h.created_at.startsWith(day)).length : 0;
+          });
+          const maxCount = Math.max(...counts, 1);
+          days.forEach((day, idx) => {
+            const bar = document.createElement('div');
+            bar.style.height = (counts[idx] / maxCount * 100) + '%';
+            bar.title = `${day}: ${counts[idx]} assays`;
+            chartDiv.appendChild(bar);
+          });
+        } else {
+          nameDisplay.textContent = 'Not logged in';
+          emailDisplay.textContent = '';
+          avatar.textContent = '?';
+          tierBadge.textContent = 'Free Tier';
+          tierBadge.className = 'tier-badge tier-free';
+          usedDisplay.textContent = '0';
+          limitDisplay.textContent = '10';
+          document.getElementById('usageChart').innerHTML = '';
+          localStorage.setItem('pharma_lastTier', '');
+        }
+      }
 
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name: name },
-          emailRedirectTo: window.location.origin + window.location.pathname + '?confirmed=true'
+      document.getElementById('profileBtn').addEventListener('click', () => {
+        if (currentUser) {
+          showProfile();
+          updateProfileUI();
+        } else {
+          showProfile();
+          renderAuthForm();
         }
       });
 
-      if (error) {
-        authErrorEl.textContent = error.message;
-        authErrorEl.style.display = 'block';
-      } else if (data.user) {
-        await supabase.from('profiles').insert([
-          { id: data.user.id, email: data.user.email, tier: 'Free', assays_used_this_month: 0 }
-        ]);
-        showToast('Account created! Check your email to confirm.', 4000);
-        await updateProfileUI();
-        showProfile();
-        renderAuthForm(); // refresh to show profile
-      }
-    });
-
-    document.getElementById('loginBtn').addEventListener('click', async () => {
-      const email = document.getElementById('authEmail').value.trim();
-      const password = document.getElementById('authPassword').value;
-      const authErrorEl = document.getElementById('authError');
-      authErrorEl.style.display = 'none';
-
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        authErrorEl.textContent = error.message;
-        authErrorEl.style.display = 'block';
-      } else {
-        currentUser = data.user;
-        await updateProfileUI();
-        showProfile();
-      }
-    });
-  }
-
-  // Email confirm handler
-  window.addEventListener('load', async () => {
-    if (window.location.hash && window.location.hash.includes('access_token')) {
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const accessToken = hashParams.get('access_token');
-      const refreshToken = hashParams.get('refresh_token');
-      if (accessToken && refreshToken) {
-        await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-        showToast('Email confirmed successfully!', 5000);
-        window.history.replaceState({}, document.title, window.location.pathname);
-        await updateProfileUI();
-      }
-    }
-    if (new URLSearchParams(window.location.search).has('confirmed')) {
-      showToast('Email confirmed. You can now log in.', 5000);
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-    await updateProfileUI();
-    showAssay();
-  });
-
-  document.getElementById('logoutBtn').addEventListener('click', async () => {
-    await supabase.auth.signOut();
-    currentUser = null;
-    showToast('Logged out successfully');
-    await updateProfileUI();
-    showAssay();
-  });
-
-  // Upgrade buttons
-  document.getElementById('upgradeMiniBtn').addEventListener('click', () => {
-    if (!currentUser) return showToast('Please log in first.');
-    const url = new URL(BOOMFI_MINI_LINK);
-    url.searchParams.set('email', currentUser.email);
-    if (currentUser.user_metadata?.full_name) url.searchParams.set('name', currentUser.user_metadata.full_name);
-    window.location.href = url.toString();
-  });
-  document.getElementById('upgradeMaxBtn').addEventListener('click', () => {
-    if (!currentUser) return showToast('Please log in first.');
-    const url = new URL(BOOMFI_MAX_LINK);
-    url.searchParams.set('email', currentUser.email);
-    if (currentUser.user_metadata?.full_name) url.searchParams.set('name', currentUser.user_metadata.full_name);
-    window.location.href = url.toString();
-  });
-
-  // Assay logic
-  typePills.forEach(p => {
-    p.addEventListener('click', () => {
-      typePills.forEach(x => x.classList.remove('active'));
-      p.classList.add('active');
-      selectedType = p.dataset.type;
-    });
-  });
-
-  clearBtn.addEventListener('click', () => {
-    targetInput.value = '';
-    goalInput.value = '';
-    statusArea.innerHTML = '';
-    outputArea.innerHTML = '<div style="text-align:center; color:var(--text-faint); padding:40px; border:2px dashed var(--border); border-radius:var(--radius);">No samples queried yet.</div>';
-  });
-
-  [targetInput, goalInput].forEach(el => {
-    el.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        if (!isCooldown) runAssay();
-      }
-    });
-  });
-
-  runBtn.addEventListener('click', runAssay);
-
-  const tickerPhrases = [
-    'optimizing search parameters', 'querying pubmed systems', 'cross-referencing structural records',
-    'analyzing abstracts with 120b logic', 'scoring lateral pathway linkages'
-  ];
-
-  function startTicker() {
-    let i = 0;
-    statusArea.innerHTML = `<div class="status-bar">&gt; ${tickerPhrases[0]}<span class="cursor"></span></div>`;
-    const line = statusArea.querySelector('.status-bar');
-    window.__tickerInterval = setInterval(() => {
-      i = (i + 1) % tickerPhrases.length;
-      line.innerHTML = `&gt; ${tickerPhrases[i]}<span class="cursor"></span>`;
-    }, 1400);
-  }
-
-  function stopTicker() {
-    if (window.__tickerInterval) clearInterval(window.__tickerInterval);
-    statusArea.innerHTML = '';
-  }
-
-  function escapeHtml(str) {
-    const d = document.createElement('div');
-    d.textContent = str == null ? '' : String(str);
-    return d.innerHTML;
-  }
-
-  function renderPayload(directResponse, results, followUpOptions, isFallback) {
-    let html = '';
-    if (directResponse) {
-      html += `
-        <div class="card" style="border-left:4px solid var(--accent); animation: fadeSlide 0.3s ease;">
-          <div class="label" style="color:var(--accent);">Synthesis & Cross-Linking</div>
-          <div id="directText" style="max-height:80px; overflow:hidden; transition:max-height 0.3s;">${escapeHtml(directResponse)}</div>
-          <button class="btn btn-secondary" style="margin-top:8px; padding:4px 12px; font-size:12px;" id="toggleDirect">Read More</button>
-        </div>`;
-    }
-
-    if (!results?.length) {
-      html += '<div style="text-align:center; padding:30px; color:var(--text-faint);">No literature found. Check synthesis box above.</div>';
-      outputArea.innerHTML = html;
-      bindToggle();
-      return;
-    }
-
-    html += `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-        <span style="font-family:monospace; font-size:12px; color:var(--text-secondary);">${results.length} ${isFallback ? 'broad matches' : 'relevant results'}</span>
-        <button class="btn btn-secondary" style="font-size:11px; padding:6px 12px;" id="copyLinks">Copy all links</button>
-      </div>`;
-
-    results.forEach((r, idx) => {
-      html += `
-        <div class="result-entry">
-          <div style="font-family:monospace; font-size:12px; color:var(--text-faint); width:30px;">${String(idx+1).padStart(3,'0')}</div>
-          <div style="flex:1;">
-            <a href="${escapeHtml(r.url)}" target="_blank" style="font-weight:600; color:var(--text); text-decoration:none;">${escapeHtml(r.title)}</a>
-            <div style="font-size:13px; color:var(--text-secondary); margin:4px 0;">${escapeHtml(r.relevance)}</div>
-            <div style="display:flex; gap:8px; font-size:11px; color:var(--text-faint);">
-              <span>${escapeHtml(r.source || 'Semantic Scholar')}</span> •
-              <span>${escapeHtml(r.studyType || '')}</span> •
-              <span>${escapeHtml(r.year || '')}</span>
+      function renderAuthForm() {
+        profilePage.innerHTML = `
+          <div class="card">
+            <span class="back-link" id="backToAssayAuth">← Back to Engine</span>
+            <h2 style="font-size:22px; margin-bottom:20px;">System Access</h2>
+            <div id="authError" style="color:var(--error); margin-bottom:12px; display:none;"></div>
+            <div class="field" id="nameField">
+              <label class="label">Name (sign up only)</label>
+              <input class="input" id="authName" type="text" placeholder="Jane Researcher" />
             </div>
-          </div>
-        </div>`;
-    });
+            <div class="field">
+              <label class="label">Email</label>
+              <input class="input" id="authEmail" type="email" placeholder="researcher@lab.com" />
+            </div>
+            <div class="field">
+              <label class="label">Password</label>
+              <input class="input" id="authPassword" type="password" placeholder="••••••••" />
+            </div>
+            <button class="btn btn-primary" style="width:100%; margin-bottom:12px;" id="loginBtn">Log In</button>
+            <button class="btn btn-secondary" style="width:100%; margin-bottom:16px;" id="signupBtn">Sign Up</button>
+            <div style="display:flex; align-items:center; gap:12px; margin: 20px 0;">
+              <hr style="flex:1; border:none; border-top:1px solid var(--border);" />
+              <span style="font-size:12px; color:var(--text-faint);">or</span>
+              <hr style="flex:1; border:none; border-top:1px solid var(--border);" />
+            </div>
+            <button class="btn btn-secondary" style="width:100%; display:flex; align-items:center; justify-content:center; gap:10px; padding:14px;" id="googleBtn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+              Continue with Google
+            </button>
+          </div>`;
 
-    if (followUpOptions?.length) {
-      html += `<div class="card" style="margin-top:24px;"><div class="label">Suggested Follow-ups</div>`;
-      followUpOptions.forEach(opt => {
-        html += `<button class="btn btn-secondary" style="width:100%; margin-top:8px; text-align:left;" data-followup="${escapeHtml(opt)}">→ ${escapeHtml(opt)}</button>`;
-      });
-      html += `</div>`;
-    }
+        document.getElementById('backToAssayAuth').addEventListener('click', showAssay);
 
-    outputArea.innerHTML = html;
-    bindToggle();
-    document.getElementById('copyLinks')?.addEventListener('click', () => {
-      const text = results.map(r => r.url).join('\n');
-      navigator.clipboard.writeText(text).then(() => showToast('Links copied!', 1500));
-    });
-    document.querySelectorAll('[data-followup]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        goalInput.value = btn.dataset.followup;
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        runAssay();
-      });
-    });
-  }
+        document.getElementById('signupBtn').addEventListener('click', async () => {
+          const name = document.getElementById('authName').value.trim();
+          const email = document.getElementById('authEmail').value.trim();
+          const password = document.getElementById('authPassword').value;
+          const authErrorEl = document.getElementById('authError');
+          authErrorEl.style.display = 'none';
+          const { data, error } = await supabase.auth.signUp({
+            email, password,
+            options: { data: { full_name: name }, emailRedirectTo: window.location.origin + window.location.pathname + '?confirmed=true' }
+          });
+          if (error) {
+            authErrorEl.textContent = error.message;
+            authErrorEl.style.display = 'block';
+          } else if (data.user) {
+            await supabase.from('profiles').insert([{ id: data.user.id, email: data.user.email, tier: 'Free', assays_used_this_month: 0 }]);
+            showToast('Account created! Check your email to confirm.', 4000);
+            await updateProfileUI();
+            showProfile();
+          }
+        });
 
-  function bindToggle() {
-    const toggleBtn = document.getElementById('toggleDirect');
-    const directText = document.getElementById('directText');
-    if (toggleBtn && directText) {
-      toggleBtn.addEventListener('click', () => {
-        const expanded = directText.style.maxHeight === 'none';
-        directText.style.maxHeight = expanded ? '80px' : 'none';
-        toggleBtn.textContent = expanded ? 'Read More' : 'Read Less';
-      });
-    }
-  }
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+          const email = document.getElementById('authEmail').value.trim();
+          const password = document.getElementById('authPassword').value;
+          const authErrorEl = document.getElementById('authError');
+          authErrorEl.style.display = 'none';
+          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+          if (error) {
+            authErrorEl.textContent = error.message;
+            authErrorEl.style.display = 'block';
+          } else {
+            currentUser = data.user;
+            await updateProfileUI();
+            showProfile();
+          }
+        });
 
-  async function runAssay() {
-    if (isCooldown) return;
-    const target = targetInput.value.trim();
-    if (!target) {
-      targetInput.style.borderColor = 'var(--error)';
-      setTimeout(() => targetInput.style.borderColor = '', 1200);
-      return;
-    }
-    const session = await getSession();
-    if (!session) {
-      showToast('Please log in to run assays.');
-      showProfile();
-      renderAuthForm();
-      return;
-    }
-
-    outputArea.innerHTML = '';
-    startTicker();
-    runBtn.disabled = true;
-
-    try {
-      const response = await fetch('/api/assay', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          target,
-          goal: goalInput.value.trim(),
-          typeLabel: selectedType
-        })
-      });
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `Request failed (${response.status})`);
+        document.getElementById('googleBtn').addEventListener('click', async () => {
+          const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: { redirectTo: window.location.origin + window.location.pathname }
+          });
+          if (error) {
+            document.getElementById('authError').textContent = error.message;
+            document.getElementById('authError').style.display = 'block';
+          }
+        });
       }
 
-      const data = await response.json();
-      renderPayload(
-        data.directResponse,
-        data.results?.filter(r => r?.title && r?.url),
-        data.followUpOptions || [],
-        data.isFallback
-      );
-    } catch (e) {
-      outputArea.innerHTML = `<div style="color:var(--error); padding:20px;">Something went wrong: ${escapeHtml(e.message)}</div>`;
-    } finally {
-      stopTicker();
-      runBtn.disabled = false;
-      isCooldown = true;
-      setTimeout(() => { isCooldown = false; }, 5000);
-    }
-  }
-})();
-</script>
+      // Email confirm handler + shareable report loading
+      window.addEventListener('load', async () => {
+        const hash = window.location.hash;
+        if (hash.includes('access_token')) {
+          const hashParams = new URLSearchParams(hash.substring(1));
+          const accessToken = hashParams.get('access_token');
+          const refreshToken = hashParams.get('refresh_token');
+          if (accessToken && refreshToken) {
+            await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+            showToast('Email confirmed successfully!', 5000);
+            window.history.replaceState({}, document.title, window.location.pathname);
+            await updateProfileUI();
+          }
+        } else if (hash.includes('report=')) {
+          try {
+            const encoded = hash.substring(1).split('report=')[1];
+            const decoded = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+            if (decoded.directResponse && decoded.results) {
+              // Display shared report read-only
+              renderSharedReport(decoded.directResponse, decoded.results, decoded.followUpOptions);
+            }
+          } catch (e) {}
+        }
+
+        if (new URLSearchParams(window.location.search).has('confirmed')) {
+          showToast('Email confirmed. You can now log in.', 5000);
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        await updateProfileUI();
+        showAssay();
+      });
+
+      function renderSharedReport(directResponse, results, followUpOptions) {
+        let html = '';
+        if (directResponse) {
+          html += `<div class="card" style="border-left:4px solid var(--accent);">
+            <div class="label" style="color:var(--accent);">Shared Report</div>
+            <div>${escapeHtml(directResponse)}</div>
+          </div>`;
+        }
+        if (results?.length) {
+          html += `<div style="margin-top:16px;"><span style="font-family:monospace; font-size:12px; color:var(--text-secondary);">${results.length} results</span></div>`;
+          results.forEach((r, idx) => {
+            html += `<div class="result-entry">
+              <div style="font-family:monospace; font-size:12px; color:var(--text-faint); width:30px;">${String(idx+1).padStart(3,'0')}</div>
+              <div style="flex:1;">
+                <a href="${escapeHtml(r.url)}" target="_blank" style="font-weight:600; color:var(--text); text-decoration:none;">${escapeHtml(r.title)}</a>
+                <div style="font-size:13px; color:var(--text-secondary); margin:4px 0;">${escapeHtml(r.relevance)}</div>
+                <div style="display:flex; gap:8px; font-size:11px; color:var(--text-faint);">
+                  <span>${escapeHtml(r.source || 'Semantic Scholar')}</span> • ${escapeHtml(r.studyType || '')} • ${escapeHtml(r.year || '')}
+                </div>
+              </div>
+            </div>`;
+          });
+        }
+        outputArea.innerHTML = html;
+      }
+
+      document.getElementById('logoutBtn').addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        currentUser = null;
+        showToast('Logged out successfully');
+        await updateProfileUI();
+        showAssay();
+      });
+
+      document.getElementById('upgradeMiniBtn').addEventListener('click', () => {
+        if (!currentUser) return showToast('Please log in first.');
+        const url = new URL(BOOMFI_MINI_LINK);
+        url.searchParams.set('email', currentUser.email);
+        if (currentUser.user_metadata?.full_name) url.searchParams.set('name', currentUser.user_metadata.full_name);
+        window.location.href = url.toString();
+      });
+      document.getElementById('upgradeMaxBtn').addEventListener('click', () => {
+        if (!currentUser) return showToast('Please log in first.');
+        const url = new URL(BOOMFI_MAX_LINK);
+        url.searchParams.set('email', currentUser.email);
+        if (currentUser.user_metadata?.full_name) url.searchParams.set('name', currentUser.user_metadata.full_name);
+        window.location.href = url.toString();
+      });
+
+      // Assay logic
+      typePills.forEach(p => {
+        p.addEventListener('click', () => {
+          typePills.forEach(x => x.classList.remove('active'));
+          p.classList.add('active');
+          selectedType = p.dataset.type;
+        });
+      });
+
+      clearBtn.addEventListener('click', () => {
+        targetInput.value = '';
+        goalInput.value = '';
+        statusArea.innerHTML = '';
+        outputArea.innerHTML = '<div style="text-align:center; color:var(--text-faint); padding:40px; border:2px dashed var(--border); border-radius:var(--radius);">No samples queried yet.</div>';
+      });
+
+      [targetInput, goalInput].forEach(el => {
+        el.addEventListener('keydown', e => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (!isCooldown) runAssay();
+          }
+        });
+      });
+
+      runBtn.addEventListener('click', runAssay);
+
+      const tickerPhrases = [
+        'optimizing search parameters', 'querying pubmed systems', 'cross-referencing structural records',
+        'analyzing abstracts with 120b logic', 'scoring lateral pathway linkages'
+      ];
+
+      function startTicker() {
+        let i = 0;
+        statusArea.innerHTML = `<div class="status-bar"><span class="pulse-ring"></span> ${tickerPhrases[0]}<span class="cursor"></span></div>`;
+        const line = statusArea.querySelector('.status-bar');
+        window.__tickerInterval = setInterval(() => {
+          i = (i + 1) % tickerPhrases.length;
+          line.innerHTML = `<span class="pulse-ring"></span> ${tickerPhrases[i]}<span class="cursor"></span>`;
+        }, 1400);
+      }
+
+      function stopTicker() {
+        if (window.__tickerInterval) clearInterval(window.__tickerInterval);
+        statusArea.innerHTML = '';
+      }
+
+      function escapeHtml(str) {
+        const d = document.createElement('div');
+        d.textContent = str == null ? '' : String(str);
+        return d.innerHTML;
+      }
+
+      function typeWriter(element, text, speed, callback) {
+        let i = 0;
+        element.innerHTML = '';
+        function type() {
+          if (i < text.length) {
+            element.innerHTML += text.charAt(i);
+            i++;
+            setTimeout(type, speed);
+          } else if (callback) {
+            callback();
+          }
+        }
+        type();
+      }
+
+      function renderPayload(directResponse, results, followUpOptions, isFallback) {
+        let html = '';
+        if (directResponse) {
+          html += `
+            <div class="card" style="border-left:4px solid var(--accent); animation: fadeSlide 0.3s ease;">
+              <div class="label" style="color:var(--accent);">Synthesis & Cross-Linking</div>
+              <div id="directText" style="max-height:80px; overflow:hidden; transition:max-height 0.3s;"></div>
+              <button class="btn btn-secondary" style="margin-top:8px; padding:4px 12px; font-size:12px; display:none;" id="toggleDirect">Read More</button>
+            </div>`;
+        }
+
+        if (!results?.length) {
+          html += '<div style="text-align:center; padding:30px; color:var(--text-faint);">No literature found. Check synthesis box above.</div>';
+          outputArea.innerHTML = html;
+          if (directResponse) {
+            const directEl = document.getElementById('directText');
+            typeWriter(directEl, directResponse, 10, () => {
+              document.getElementById('toggleDirect').style.display = 'inline-block';
+            });
+            bindToggle();
+          }
+          return;
+        }
+
+        html += `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <span style="font-family:monospace; font-size:12px; color:var(--text-secondary);">${results.length} ${isFallback ? 'broad matches' : 'relevant results'}</span>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-secondary" style="font-size:11px; padding:6px 12px;" id="copyLinks">Copy links</button>
+              <button class="btn btn-secondary" style="font-size:11px; padding:6px 12px;" id="shareReport">Share report</button>
+            </div>
+          </div>`;
+
+        results.forEach((r, idx) => {
+          const studyClass = (r.studyType || '').toLowerCase().replace(/\s+/g, '-');
+          html += `
+            <div class="result-entry">
+              <div style="font-family:monospace; font-size:12px; color:var(--text-faint); width:30px;">${String(idx+1).padStart(3,'0')}</div>
+              <div style="flex:1;">
+                <a href="${escapeHtml(r.url)}" target="_blank" style="font-weight:600; color:var(--text); text-decoration:none;">${escapeHtml(r.title)}</a>
+                <div style="font-size:13px; color:var(--text-secondary); margin:4px 0;">${escapeHtml(r.relevance)}</div>
+                <div style="display:flex; gap:8px; align-items:center; font-size:11px; color:var(--text-faint);">
+                  <span>${escapeHtml(r.source || 'Semantic Scholar')}</span> •
+                  <span class="badge ${studyClass}">${escapeHtml(r.studyType || '')}</span> •
+                  <span>${escapeHtml(r.year || '')}</span>
+                  ${r.abstract ? `<span class="tooltip" data-tooltip="${escapeHtml(r.abstract.slice(0, 120))}">ⓘ</span>` : ''}
+                </div>
+              </div>
+            </div>`;
+        });
+
+        if (followUpOptions?.length) {
+          html += `<div class="card" style="margin-top:24px;"><div class="label">Suggested Follow-ups</div>`;
+          followUpOptions.forEach(opt => {
+            html += `<button class="btn btn-secondary" style="width:100%; margin-top:8px; text-align:left;" data-followup="${escapeHtml(opt)}">→ ${escapeHtml(opt)}</button>`;
+          });
+          html += `</div>`;
+        }
+
+        outputArea.innerHTML = html;
+
+        // Typing animation for synthesis
+        if (directResponse) {
+          const directEl = document.getElementById('directText');
+          typeWriter(directEl, directResponse, 10, () => {
+            const toggleBtn = document.getElementById('toggleDirect');
+            if (toggleBtn) toggleBtn.style.display = 'inline-block';
+          });
+          bindToggle();
+        }
+
+        // Copy & Share
+        document.getElementById('copyLinks')?.addEventListener('click', () => {
+          const text = results.map(r => r.url).join('\n');
+          navigator.clipboard.writeText(text).then(() => showToast('Links copied!', 1500));
+        });
+
+        document.getElementById('shareReport')?.addEventListener('click', () => {
+          const reportData = {
+            directResponse: directResponse,
+            results: results.slice(0, 5).map(r => ({ title: r.title, url: r.url, relevance: r.relevance, studyType: r.studyType, year: r.year })),
+            followUpOptions: followUpOptions
+          };
+          const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(reportData))));
+          const shareUrl = window.location.origin + window.location.pathname + '#report=' + encoded;
+          navigator.clipboard.writeText(shareUrl).then(() => showToast('Report link copied!', 2000));
+        });
+
+        // Follow-up buttons
+        document.querySelectorAll('[data-followup]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            goalInput.value = btn.dataset.followup;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            runAssay();
+          });
+        });
+      }
+
+      function bindToggle() {
+        const toggleBtn = document.getElementById('toggleDirect');
+        const directText = document.getElementById('directText');
+        if (toggleBtn && directText) {
+          toggleBtn.addEventListener('click', () => {
+            const expanded = directText.style.maxHeight === 'none';
+            directText.style.maxHeight = expanded ? '80px' : 'none';
+            toggleBtn.textContent = expanded ? 'Read More' : 'Read Less';
+          });
+        }
+      }
+
+      async function runAssay() {
+        if (isCooldown) return;
+        const target = targetInput.value.trim();
+        if (!target) {
+          targetInput.style.borderColor = 'var(--error)';
+          setTimeout(() => targetInput.style.borderColor = '', 1200);
+          return;
+        }
+        const session = await getSession();
+        if (!session) {
+          showToast('Please log in to run assays.');
+          showProfile();
+          renderAuthForm();
+          return;
+        }
+        outputArea.innerHTML = '';
+        startTicker();
+        runBtn.disabled = true;
+
+        try {
+          const response = await fetch('/api/assay', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+            body: JSON.stringify({ target, goal: goalInput.value.trim(), typeLabel: selectedType })
+          });
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || `Request failed (${response.status})`);
+          }
+          const data = await response.json();
+          renderPayload(
+            data.directResponse,
+            data.results?.filter(r => r?.title && r?.url),
+            data.followUpOptions || [],
+            data.isFallback
+          );
+        } catch (e) {
+          outputArea.innerHTML = `<div style="color:var(--error); padding:20px;">Something went wrong: ${escapeHtml(e.message)}</div>`;
+        } finally {
+          stopTicker();
+          runBtn.disabled = false;
+          isCooldown = true;
+          setTimeout(() => { isCooldown = false; }, 5000);
+        }
+      }
+    })();
+  </script>
 </body>
 </html>
