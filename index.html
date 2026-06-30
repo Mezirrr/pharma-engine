@@ -256,7 +256,7 @@
       align-items: center;
       justify-content: center;
       font-size: 18px;
-      color: var(--text);              /* black in light, white in dark */
+      color: var(--text);
       transition: all 0.2s;
       box-shadow: none;
     }
@@ -408,8 +408,9 @@
       font-family: 'IBM Plex Mono', monospace;
     }
     .tier-free { background: var(--surface-hover); color: var(--text); }
-    .tier-mini { background: var(--accent-soft); color: var(--accent); }
-    .tier-max  { background: var(--success-soft); color: var(--success); }
+    .tier-starter { background: var(--accent-soft); color: var(--accent); }
+    .tier-researcher { background: var(--success-soft); color: var(--success); }
+    .tier-lab-rat { background: var(--warning-soft); color: var(--warning); }
 
     .usage-stat {
       font-size: 18px;
@@ -418,23 +419,70 @@
     }
 
     .upgrade-card {
-      background: linear-gradient(135deg, var(--primary-soft) 0%, var(--surface) 100%);
+      background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       padding: 24px;
       margin-top: 32px;
-      text-align: center;
     }
-    .upgrade-heading {
+
+    .upgrade-title {
       font-size: 18px;
       font-weight: 700;
-      margin-bottom: 8px;
+      margin-bottom: 16px;
+      text-align: center;
       color: var(--text);
     }
-    .upgrade-sub {
-      font-size: 13px;
+
+    .tier-option {
+      background: var(--surface-hover);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s;
+    }
+    .tier-option:hover {
+      box-shadow: var(--shadow-md);
+    }
+    .tier-option.current {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-soft);
+    }
+
+    .tier-info {
+      flex: 1;
+    }
+
+    .tier-name {
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .tier-desc {
       color: var(--text-secondary);
-      margin-bottom: 20px;
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .tier-price {
+      font-weight: 700;
+      font-size: 18px;
+      white-space: nowrap;
+    }
+
+    .btn-sm {
+      padding: 8px 16px;
+      font-size: 12px;
+    }
+
+    .current-badge {
+      color: var(--success);
+      font-weight: 600;
+      font-size: 13px;
     }
 
     .sci-hub-link {
@@ -604,7 +652,7 @@
           </div>
 
           <div class="usage-stat">
-            Used <strong id="usedDisplay">0</strong> of <strong id="limitDisplay">10</strong> assays this month
+            Used <strong id="usedDisplay">0</strong> of <strong id="limitDisplay">3</strong> assays this month
           </div>
 
           <div style="margin: 24px 0;">
@@ -612,15 +660,9 @@
             <div class="chart-bar" id="usageChart"></div>
           </div>
 
-          <div class="upgrade-card">
-            <div class="upgrade-heading">⚡ Upgrade Your Permission</div>
-            <div class="upgrade-sub">Unlock higher limits and support the engine</div>
-            <button class="btn btn-primary" style="width:100%; margin-bottom:12px;" id="upgradeMiniBtn">
-              Mini – $15/mo (250 assays)
-            </button>
-            <button class="btn" style="width:100%; background:var(--success); color:white;" id="upgradeMaxBtn">
-              Max – $30/mo (750 assays)
-            </button>
+          <div class="upgrade-card" id="upgradeSection">
+            <div class="upgrade-title">⚡ Upgrade Your Plan</div>
+            <div id="tierOptions"></div>
           </div>
 
           <hr>
@@ -670,8 +712,24 @@
     (function() {
       const SUPABASE_URL = 'https://mbhkckspzqvozgoaggws.supabase.co';
       const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iaGtja3NwenF2b3pnb2FnZ3dzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NzU1MzgsImV4cCI6MjA5ODM1MTUzOH0.CDlcgRAmiyMhA4d20xajUDLWHzWg4iG0NFyI_W-GizE';
-      const BOOMFI_MINI_LINK = 'https://pay.boomfi.xyz/3Fq6eeDBlzuJJkw6g2GAAke4pza';
-      const BOOMFI_MAX_LINK = 'https://pay.boomfi.xyz/3Fq6nVmwV2eAZi0R2mCOxjPjwkZ';
+
+      // New payment links
+      const PAYMENT_LINKS = {
+        Starter: 'https://pay.boomfi.xyz/3FrlWsKwMDESJ1J2l5uSPsbuSFf',
+        Researcher: 'https://pay.boomfi.xyz/3FrlvM7EoqGUji2WoRw1dkTHoJo',
+        'Lab Rat': 'https://pay.boomfi.xyz/3FrmBAuXkpfulxXGcgiaQSvTelI'
+      };
+
+      // Tier metadata for the upgrade UI
+      const TIER_META = {
+        Free:       { runs: '3',   tokens: '5,000',  price: '$0',     desc: 'Basic access',               features: [] },
+        Starter:    { runs: '50',  tokens: '7,500',  price: '$9.99',  desc: '1.5× processing power',      features: ['50 runs/month'] },
+        Researcher: { runs: '200', tokens: '10,000', price: '$24.99', desc: '2× processing power',        features: ['200 runs/month', 'Export to CSV/PDF', 'History (30 days)'] },
+        'Lab Rat':  { runs: '∞',   tokens: '15,000', price: '$49.99', desc: '3× processing power',        features: ['Unlimited runs', 'Bulk CSV upload', 'History (180 days)'] }
+      };
+
+      // Tier limits for usage display
+      const TIER_LIMITS = { Free: 3, Starter: 50, Researcher: 200, 'Lab Rat': 999999 };
 
       const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       let currentUser = null;
@@ -693,7 +751,6 @@
       const optimizeGoalBtn = document.getElementById('optimizeGoalBtn');
 
       let selectedType = 'auto';
-      const TIER_LIMITS = { Free: 10, Mini: 250, Max: 750 };
 
       // Dark mode
       function applyTheme(dark) {
@@ -740,6 +797,43 @@
         document.getElementById('profileAuthView').style.display = isLoggedIn ? 'none' : 'block';
       }
 
+      function renderTierOptions(currentTier) {
+        const container = document.getElementById('tierOptions');
+        if (!container) return;
+
+        const tiers = ['Free', 'Starter', 'Researcher', 'Lab Rat'];
+        let html = '';
+        tiers.forEach(tier => {
+          const meta = TIER_META[tier];
+          const isCurrent = currentTier === tier;
+          html += `
+            <div class="tier-option ${isCurrent ? 'current' : ''}">
+              <div class="tier-info">
+                <div class="tier-name">${tier}</div>
+                <div class="tier-desc">${meta.desc} · ${meta.runs} runs/mo · ${meta.tokens} max tokens</div>
+                ${meta.features.length ? '<div class="tier-desc" style="margin-top:4px;">' + meta.features.join(' · ') + '</div>' : ''}
+              </div>
+              <div style="text-align:right; flex-shrink:0; margin-left:16px;">
+                <div class="tier-price">${meta.price}/mo</div>
+                ${!isCurrent && tier !== 'Free' ? `<button class="btn btn-primary btn-sm upgrade-btn" data-tier="${tier}">Upgrade</button>` : (isCurrent ? '<span class="current-badge">Current</span>' : '')}
+              </div>
+            </div>
+          `;
+        });
+        container.innerHTML = html;
+
+        container.querySelectorAll('.upgrade-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const tier = btn.dataset.tier;
+            if (!currentUser) return showToast('Please log in first.');
+            const url = new URL(PAYMENT_LINKS[tier]);
+            url.searchParams.set('email', currentUser.email);
+            if (currentUser.user_metadata?.full_name) url.searchParams.set('name', currentUser.user_metadata.full_name);
+            window.location.href = url.toString();
+          });
+        });
+      }
+
       async function updateProfileUI() {
         const session = await getSession();
         currentUser = session?.user || null;
@@ -758,16 +852,21 @@
           const period = new Date().toISOString().slice(0, 7);
           const used = (data && data.usage_period === period) ? (data.assays_used_this_month || 0) : 0;
           const tier = data?.tier || 'Free';
-          const limit = TIER_LIMITS[tier] || 10;
+          const limit = TIER_LIMITS[tier] || TIER_LIMITS.Free;
 
           const badge = document.getElementById('tierBadge');
-          if (badge) { badge.textContent = tier + ' Tier'; badge.className = 'tier-badge tier-' + tier.toLowerCase(); }
+          if (badge) {
+            badge.textContent = tier + ' Tier';
+            badge.className = 'tier-badge tier-' + tier.toLowerCase().replace(/\s+/g, '-');
+          }
           const usedEl = document.getElementById('usedDisplay');
           if (usedEl) usedEl.textContent = used;
           const limitEl = document.getElementById('limitDisplay');
-          if (limitEl) limitEl.textContent = limit;
+          if (limitEl) limitEl.textContent = limit === 999999 ? '∞' : limit;
 
-          if (lastTier && lastTier !== tier && (tier === 'Mini' || tier === 'Max')) {
+          renderTierOptions(tier);
+
+          if (lastTier && lastTier !== tier && (tier === 'Starter' || tier === 'Researcher' || tier === 'Lab Rat')) {
             confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
             showToast('🎉 Thanks for upgrading!', 4000);
           }
@@ -846,21 +945,6 @@
         showToast('Logged out successfully');
         await updateProfileUI();
         showAssay();
-      });
-
-      document.getElementById('upgradeMiniBtn').addEventListener('click', () => {
-        if (!currentUser) return showToast('Please log in first.');
-        const url = new URL(BOOMFI_MINI_LINK);
-        url.searchParams.set('email', currentUser.email);
-        if (currentUser.user_metadata?.full_name) url.searchParams.set('name', currentUser.user_metadata.full_name);
-        location.href = url.toString();
-      });
-      document.getElementById('upgradeMaxBtn').addEventListener('click', () => {
-        if (!currentUser) return showToast('Please log in first.');
-        const url = new URL(BOOMFI_MAX_LINK);
-        url.searchParams.set('email', currentUser.email);
-        if (currentUser.user_metadata?.full_name) url.searchParams.set('name', currentUser.user_metadata.full_name);
-        location.href = url.toString();
       });
 
       // Optimize button
@@ -963,7 +1047,7 @@
           outputArea.innerHTML = html;
           if (directResponse) {
             const directEl = document.getElementById('directText');
-            typeWriter(directEl, directResponse, 3);   // 2.5x faster (3ms/char)
+            typeWriter(directEl, directResponse, 3);
             bindToggle();
           }
           return;
@@ -1008,7 +1092,7 @@
 
         if (directResponse) {
           const directEl = document.getElementById('directText');
-          typeWriter(directEl, directResponse, 3);   // 2.5x faster
+          typeWriter(directEl, directResponse, 3);
           bindToggle();
         }
 
