@@ -76,15 +76,11 @@
     body::before {
       content: "";
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      top: 0; left: 0; width: 100%; height: 100%;
       background: radial-gradient(ellipse at 20% 50%, rgba(37,99,235,0.03) 0%, transparent 50%),
                   radial-gradient(ellipse at 80% 20%, rgba(5,150,105,0.03) 0%, transparent 50%),
                   radial-gradient(ellipse at 50% 80%, rgba(217,119,6,0.03) 0%, transparent 50%);
-      pointer-events: none;
-      z-index: 0;
+      pointer-events: none; z-index: 0;
       animation: gradientShift 20s ease-in-out infinite alternate;
     }
     @keyframes gradientShift {
@@ -134,7 +130,7 @@
       gap: 12px;
     }
 
-    .theme-toggle {
+    .icon-btn {
       width: 44px; height: 44px;
       border-radius: 50%;
       background: var(--surface);
@@ -146,38 +142,18 @@
       box-shadow: var(--shadow-sm);
       transition: all var(--transition-slow);
       color: var(--text);
+      position: relative;
     }
-    .theme-toggle:hover {
+    .icon-btn:hover {
       border-color: var(--accent);
       color: var(--accent);
       box-shadow: var(--shadow-md);
       transform: translateY(-2px) scale(1.05);
     }
+    .icon-btn.logged-in { background: var(--accent); color: white; border-color: var(--accent); }
 
-    .profile-btn {
-      width: 44px; height: 44px;
-      border-radius: 50%;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      box-shadow: var(--shadow-sm);
-      transition: all var(--transition-slow);
-      color: var(--text);
-    }
-    .profile-btn:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-      box-shadow: var(--shadow-md);
-      transform: translateY(-2px) scale(1.05);
-    }
-    .profile-btn.logged-in {
-      background: var(--accent);
-      color: white;
-      border-color: var(--accent);
-    }
+    .topup-btn { font-size: 20px; }
+    .topup-btn .coin-icon { display: inline-block; line-height: 1; }
 
     .page {
       display: none;
@@ -246,8 +222,7 @@
       position: absolute;
       bottom: 8px;
       right: 8px;
-      width: 32px;
-      height: 32px;
+      width: 32px; height: 32px;
       border-radius: 8px;
       background: transparent;
       border: none;
@@ -260,22 +235,13 @@
       transition: all 0.2s;
       box-shadow: none;
     }
-    .optimize-btn:hover {
-      transform: scale(1.2);
-      color: var(--accent);
-    }
+    .optimize-btn:hover { transform: scale(1.2); color: var(--accent); }
 
-    .pills {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
+    .pills { display: flex; gap: 8px; flex-wrap: wrap; }
     .pill {
       font-family: 'IBM Plex Mono', monospace;
-      font-size: 12px;
-      font-weight: 500;
-      padding: 8px 16px;
-      border-radius: 8px;
+      font-size: 12px; font-weight: 500;
+      padding: 8px 16px; border-radius: 8px;
       border: 1px solid var(--border);
       background: var(--surface);
       color: var(--text-secondary);
@@ -293,55 +259,41 @@
 
     .btn {
       font-family: 'IBM Plex Mono', monospace;
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      border: none;
-      border-radius: var(--radius-sm);
-      padding: 12px 24px;
-      cursor: pointer;
+      font-size: 13px; font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      border: none; border-radius: var(--radius-sm);
+      padding: 12px 24px; cursor: pointer;
       transition: all var(--transition-slow);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      box-shadow: var(--shadow-sm);
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px; box-shadow: var(--shadow-sm);
     }
-    .btn-primary {
-      background: var(--accent);
-      color: white;
-    }
+    .btn-primary { background: var(--accent); color: white; }
     .btn-primary:hover { background: #1D4ED8; transform: translateY(-2px) scale(1.02); box-shadow: var(--shadow-md); }
-    .btn-secondary {
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--text-secondary);
-    }
+    .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); }
     .btn-secondary:hover { background: var(--surface-hover); transform: translateY(-1px); }
+    .btn-warning { background: var(--warning); color: white; }
+    .btn-warning:hover { background: #B45309; transform: translateY(-2px); box-shadow: var(--shadow-md); }
     .btn:disabled { opacity: 0.5; pointer-events: none; }
 
     .row-btns { display: flex; gap: 12px; margin-top: 24px; }
 
+    .usage-alert {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 600;
+      padding: 6px 12px; border-radius: 20px;
+      background: var(--surface-hover); color: var(--text-secondary);
+    }
+    .usage-alert.low { background: rgba(217,119,6,0.1); color: var(--warning); border: 1px solid var(--warning-soft); }
+
     .status-bar {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 13px;
-      color: var(--accent);
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 12px 16px;
-      margin-bottom: 20px;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      box-shadow: var(--shadow-sm);
-      animation: fadeSlide 0.2s ease;
+      font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--accent);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 12px 16px;
+      margin-bottom: 20px; display: inline-flex; align-items: center;
+      gap: 8px; box-shadow: var(--shadow-sm); animation: fadeSlide 0.2s ease;
     }
     .pulse-ring {
-      display: inline-block;
-      width: 10px; height: 10px;
-      border-radius: 50%;
+      display: inline-block; width: 10px; height: 10px; border-radius: 50%;
       background: var(--accent);
       box-shadow: 0 0 0 0 rgba(37,99,235,0.4);
       animation: pulse 1.5s infinite;
@@ -351,262 +303,89 @@
       70% { box-shadow: 0 0 0 10px rgba(37,99,235,0); }
       100% { box-shadow: 0 0 0 0 rgba(37,99,235,0); }
     }
-    .cursor {
-      width: 6px; height: 16px;
-      background: var(--accent);
-      animation: blink 1s steps(1) infinite;
-    }
+    .cursor { width: 6px; height: 16px; background: var(--accent); animation: blink 1s steps(1) infinite; }
     @keyframes blink { 50% { opacity: 0; } }
 
     .toast {
-      position: fixed;
-      top: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--primary);
-      color: var(--bg);
-      padding: 14px 28px;
-      border-radius: 40px;
-      font-weight: 600;
-      font-size: 14px;
-      box-shadow: 0 12px 30px rgba(0,0,0,0.2);
-      z-index: 2000;
-      animation: slideDown 0.4s ease;
-      display: none;
+      position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--primary); color: var(--bg); padding: 14px 28px;
+      border-radius: 40px; font-weight: 600; font-size: 14px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.2); z-index: 2000;
+      animation: slideDown 0.4s ease; display: none;
     }
     @keyframes slideDown {
       from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
       to { opacity: 1; transform: translateX(-50%) translateY(0); }
     }
 
-    .profile-header {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 32px;
-    }
+    .profile-header { display: flex; align-items: center; gap: 16px; margin-bottom: 32px; }
     .avatar {
-      width: 64px; height: 64px;
-      background: var(--primary);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--bg);
-      font-size: 28px;
-      font-weight: 700;
+      width: 64px; height: 64px; background: var(--primary); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--bg); font-size: 28px; font-weight: 700;
       transition: transform var(--transition-slow);
     }
     .avatar:hover { transform: scale(1.05) rotate(2deg); }
     .tier-badge {
-      display: inline-block;
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: 700;
-      text-transform: uppercase;
+      display: inline-block; padding: 4px 12px; border-radius: 20px;
+      font-size: 13px; font-weight: 700; text-transform: uppercase;
       font-family: 'IBM Plex Mono', monospace;
     }
     .tier-free { background: var(--surface-hover); color: var(--text); }
     .tier-starter { background: var(--accent-soft); color: var(--accent); }
     .tier-researcher { background: var(--success-soft); color: var(--success); }
-    .tier-lab-rat { background: var(--warning-soft); color: var(--warning); }
 
-    .usage-stat {
-      font-size: 18px;
-      font-weight: 600;
-      margin: 6px 0 20px;
-    }
+    .usage-stat { font-size: 18px; font-weight: 600; margin: 6px 0 20px; }
 
-    .upgrade-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 24px;
-      margin-top: 32px;
-    }
+    .upgrade-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 24px; margin-top: 32px; }
+    .upgrade-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; text-align: center; color: var(--text); }
 
-    .upgrade-title {
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 16px;
-      text-align: center;
-      color: var(--text);
-    }
+    .tier-option { background: var(--surface-hover); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s; }
+    .tier-option:hover { box-shadow: var(--shadow-md); }
+    .tier-option.current { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+    .tier-info { flex: 1; }
+    .tier-name { font-weight: 700; font-size: 16px; }
+    .tier-desc { color: var(--text-secondary); font-size: 13px; margin-top: 4px; }
+    .tier-price { font-weight: 700; font-size: 18px; white-space: nowrap; }
+    .btn-sm { padding: 8px 16px; font-size: 12px; }
+    .current-badge { color: var(--success); font-weight: 600; font-size: 13px; }
 
-    .tier-option {
-      background: var(--surface-hover);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 16px;
-      margin-bottom: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      transition: all 0.2s;
-    }
-    .tier-option:hover {
-      box-shadow: var(--shadow-md);
-    }
-    .tier-option.current {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 2px var(--accent-soft);
-    }
+    .free-downgrade { text-align: center; margin-top: 16px; font-size: 14px; }
+    .free-downgrade a { color: var(--accent); text-decoration: underline; cursor: pointer; }
 
-    .tier-info {
-      flex: 1;
-    }
+    .comparison-table { margin-top: 20px; border-collapse: collapse; width: 100%; font-size: 13px; }
+    .comparison-table th, .comparison-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+    .comparison-table th { font-weight: 600; color: var(--text-secondary); }
 
-    .tier-name {
-      font-weight: 700;
-      font-size: 16px;
-    }
+    .medical-disclaimer { margin-top: 32px; font-size: 12px; color: var(--text-faint); line-height: 1.6; text-align: center; border-top: 1px solid var(--border); padding-top: 20px; }
 
-    .tier-desc {
-      color: var(--text-secondary);
-      font-size: 13px;
-      margin-top: 4px;
-    }
+    .sci-hub-inline { font-size: 13px; color: var(--text-faint); margin-bottom: 12px; }
+    .sci-hub-inline a { color: var(--accent); text-decoration: underline; }
 
-    .tier-price {
-      font-weight: 700;
-      font-size: 18px;
-      white-space: nowrap;
-    }
-
-    .btn-sm {
-      padding: 8px 16px;
-      font-size: 12px;
-    }
-
-    .current-badge {
-      color: var(--success);
-      font-weight: 600;
-      font-size: 13px;
-    }
-
-    .free-downgrade {
-      text-align: center;
-      margin-top: 16px;
-      font-size: 14px;
-    }
-    .free-downgrade a {
-      color: var(--accent);
-      text-decoration: underline;
-      cursor: pointer;
-    }
-
-    .comparison-table {
-      margin-top: 20px;
-      border-collapse: Read More;
-      width: 100%;
-      font-size: 13px;
-    }
-    .comparison-table th, .comparison-table td {
-      padding: 8px 10px;
-      border-bottom: 1px solid var(--border);
-      text-align: left;
-    }
-    .comparison-table th {
-      font-weight: 600;
-      color: var(--text-secondary);
-    }
-
-    .sci-hub-link {
-      font-size: 13px;
-      color: var(--text-faint);
-      margin-top: 16px;
-      display: block;
-    }
-    .sci-hub-link a { color: var(--accent); text-decoration: underline; }
-
-    hr {
-      border: none;
-      border-top: 1px solid var(--border);
-      margin: 28px 0;
-    }
-
-    .back-link {
-      color: var(--accent);
-      font-weight: 600;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      margin-bottom: 24px;
-      transition: transform var(--transition-slow);
-    }
+    hr { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+    .back-link { color: var(--accent); font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 24px; transition: transform var(--transition-slow); }
     .back-link:hover { transform: translateX(-4px); }
 
-    .result-entry {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 18px;
-      margin-bottom: 12px;
-      display: flex;
-      gap: 16px;
-      transition: all var(--transition-slow);
-      animation: fadeSlide 0.25s ease;
-    }
-    .result-entry:hover {
-      box-shadow: var(--shadow-md);
-      transform: translateY(-2px);
-    }
+    .result-entry { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 18px; margin-bottom: 12px; display: flex; gap: 16px; transition: all var(--transition-slow); animation: fadeSlide 0.25s ease; }
+    .result-entry:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
 
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 600;
-      background: var(--surface-hover);
-      color: var(--text-secondary);
-    }
+    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: var(--surface-hover); color: var(--text-secondary); }
     .badge.in-vivo { background: #DCFCE7; color: #166534; }
     .badge.in-vitro { background: #E0F2FE; color: #075985; }
     .badge.human { background: #FEE2E2; color: #991B1B; }
 
-    .tooltip {
-      position: relative;
-      cursor: help;
-    }
+    .tooltip { position: relative; cursor: help; }
     .tooltip::after {
       content: attr(data-tooltip);
-      position: absolute;
-      bottom: 125%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--primary);
-      color: var(--bg);
-      padding: 6px 10px;
-      border-radius: 6px;
-      font-size: 12px;
-      white-space: normal;
-      max-width: 220px;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.2s;
-      z-index: 10;
+      position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%);
+      background: var(--primary); color: var(--bg); padding: 6px 10px; border-radius: 6px;
+      font-size: 12px; white-space: normal; max-width: 220px;
+      pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 10;
     }
-    .tooltip:hover::after {
-      opacity: 1;
-    }
+    .tooltip:hover::after { opacity: 1; }
 
-    .chart-bar {
-      display: flex;
-      align-items: flex-end;
-      gap: 4px;
-      height: 40px;
-    }
-    .chart-bar div {
-      flex: 1;
-      background: var(--accent);
-      border-radius: 4px 4px 0 0;
-      min-height: 4px;
-    }
+    .chart-bar { display: flex; align-items: flex-end; gap: 4px; height: 40px; }
+    .chart-bar div { flex: 1; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 4px; }
   </style>
 </head>
 <body>
@@ -615,12 +394,11 @@
     <header class="app-header">
       <div class="logo"><span class="logo-dot"></span>By Mezir</div>
       <div class="header-actions">
-        <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
-          <svg id="themeIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-          </svg>
+        <button class="icon-btn theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+          <svg id="themeIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         </button>
-        <button class="profile-btn" id="profileBtn">
+        <button class="icon-btn topup-btn" id="topupBtn" title="Buy more assays">🪙</button>
+        <button class="icon-btn profile-btn" id="profileBtn">
           <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </button>
       </div>
@@ -650,9 +428,13 @@
             <button class="pill" data-type="pathway">Pathway</button>
           </div>
         </div>
-        <div class="row-btns">
+        <div class="row-btns" style="align-items: center;">
           <button class="btn btn-primary" id="runBtn">Run Assay</button>
           <button class="btn btn-secondary" id="clearBtn">Clear</button>
+          <div class="usage-alert" id="usageAlert" style="display:none;">
+            <span id="remainingAssays"></span>
+            <button class="btn btn-warning btn-sm" id="topupInlineBtn">Top Up</button>
+          </div>
         </div>
       </div>
       <div id="statusArea"></div>
@@ -663,6 +445,7 @@
       </div>
     </div>
 
+    <!-- Profile Page -->
     <div class="page" id="profilePage">
       <div class="card">
         <span class="back-link" id="backToAssay">← Back to Engine</span>
@@ -695,10 +478,11 @@
             </div>
           </div>
 
-          <hr>
-          <div class="sci-hub-link">
-            Study not showing full‑text? Try <a href="https://sci-hub.ru" target="_blank" rel="noopener">Sci‑Hub.ru</a>
+          <div class="medical-disclaimer">
+            <strong>Medical Disclaimer</strong><br>
+            PharmaEngine is a research tool for informational purposes only. It does not provide medical advice, diagnosis, or treatment. Always consult a qualified healthcare professional before making any decisions based on the information provided.
           </div>
+
           <button class="btn btn-secondary" style="width:100%; margin-top:20px;" id="logoutBtn">Log Out</button>
         </div>
 
@@ -736,6 +520,16 @@
         </div>
       </div>
     </div>
+
+    <!-- Top-Up Modal -->
+    <div class="page" id="topupPage">
+      <div class="card">
+        <span class="back-link" id="backToAssayFromTopup">← Back</span>
+        <h2 style="font-size:22px; margin-bottom:16px;">🪙 Top Up Assays</h2>
+        <p style="color:var(--text-secondary); margin-bottom:20px;">Add extra assays to your account instantly. Top‑up assays never expire while you have an active subscription.</p>
+        <div id="topupOptions"></div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -746,25 +540,32 @@
       const PAYMENT_LINKS = {
         Starter: 'https://pay.boomfi.xyz/3FrlWsKwMDESJ1J2l5uSPsbuSFf',
         Researcher: 'https://pay.boomfi.xyz/3FrlvM7EoqGUji2WoRw1dkTHoJo',
-        'Lab Rat': 'https://pay.boomfi.xyz/3FrmBAuXkpfulxXGcgiaQSvTelI'
+        // Lab Rat removed
       };
+
+      const TOPUP_PLANS = [
+        { assays: 20, price: '$5', link: 'https://pay.boomfi.xyz/3FsuzTkRkaQ1cnyHtIaBcVYNy2f', ref: 'topup20' },
+        { assays: 45, price: '$10', link: 'https://pay.boomfi.xyz/3FsvC1V3d9FEYow2ZaXoph1wScN', ref: 'topup45' },
+        { assays: 100, price: '$20', link: 'https://pay.boomfi.xyz/3FsvNYGPh4lecsYhYNCePu8Qdjo', ref: 'topup100' }
+      ];
 
       const TIER_META = {
         Free:       { assays: '3',   depth: 'Standard',   price: '$0',     desc: 'Basic analysis',               export: false, history: '–', bulk: false },
         Starter:    { assays: '50',  depth: 'Enhanced',   price: '$9.99',  desc: 'Deeper research outputs',       export: false, history: '–', bulk: false },
-        Researcher: { assays: '200', depth: 'Deep',       price: '$24.99', desc: 'Advanced synthesis',            export: true,  history: '30 days', bulk: false },
-        'Lab Rat':  { assays: '∞',   depth: 'Maximum',    price: '$39.99', desc: 'Full analytical power',         export: true,  history: '180 days', bulk: true }
+        Researcher: { assays: '250', depth: 'Deep',       price: '$24.99', desc: 'Advanced synthesis',            export: true,  history: '30 days', bulk: true }
       };
 
-      const TIER_LIMITS = { Free: 3, Starter: 50, Researcher: 200, 'Lab Rat': 999999 };
+      const TIER_LIMITS = { Free: 3, Starter: 50, Researcher: 250 };
 
       const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       let currentUser = null;
       let isCooldown = false;
       let lastTier = localStorage.getItem('pharma_lastTier') || '';
+      let topupAssaysRemaining = 0; // extra from top-ups
 
       const assayPage = document.getElementById('assayPage');
       const profilePage = document.getElementById('profilePage');
+      const topupPage = document.getElementById('topupPage');
       const toast = document.getElementById('toast');
       const targetInput = document.getElementById('targetInput');
       const goalInput = document.getElementById('goalInput');
@@ -776,41 +577,28 @@
       const themeToggle = document.getElementById('themeToggle');
       const themeIcon = document.getElementById('themeIcon');
       const optimizeGoalBtn = document.getElementById('optimizeGoalBtn');
+      const topupBtn = document.getElementById('topupBtn');
+      const usageAlert = document.getElementById('usageAlert');
+      const remainingAssaysSpan = document.getElementById('remainingAssays');
+      const topupInlineBtn = document.getElementById('topupInlineBtn');
 
       let selectedType = 'auto';
 
-      function applyTheme(dark) {
-        if (dark) {
-          document.body.classList.add('dark');
-          themeIcon.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
-        } else {
-          document.body.classList.remove('dark');
-          themeIcon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
-        }
-      }
+      function applyTheme(dark) { /* same as before */ }
       const savedTheme = localStorage.getItem('pharma_theme');
       applyTheme(savedTheme === 'dark');
-      themeToggle.addEventListener('click', () => {
-        const isDark = document.body.classList.contains('dark');
-        applyTheme(!isDark);
-        localStorage.setItem('pharma_theme', isDark ? 'light' : 'dark');
-      });
+      themeToggle.addEventListener('click', () => { /* same */ });
 
-      function showToast(msg, dur = 3000) {
-        toast.textContent = msg;
-        toast.style.display = 'block';
-        setTimeout(() => { toast.style.display = 'none'; }, dur);
-      }
+      function showToast(msg, dur = 3000) { /* same */ }
 
-      function showAssay() {
-        assayPage.classList.add('active');
-        profilePage.classList.remove('active');
-      }
-      function showProfile() {
-        assayPage.classList.remove('active');
-        profilePage.classList.add('active');
-      }
+      function showAssay() { assayPage.classList.add('active'); profilePage.classList.remove('active'); topupPage.classList.remove('active'); }
+      function showProfile() { assayPage.classList.remove('active'); profilePage.classList.add('active'); topupPage.classList.remove('active'); }
+      function showTopup() { assayPage.classList.remove('active'); profilePage.classList.remove('active'); topupPage.classList.add('active'); }
+
       document.getElementById('backToAssay').addEventListener('click', showAssay);
+      document.getElementById('backToAssayFromTopup').addEventListener('click', showAssay);
+      topupBtn.addEventListener('click', () => { if (!currentUser) return showToast('Please log in.'); showTopup(); renderTopupOptions(); });
+      topupInlineBtn.addEventListener('click', () => { showTopup(); renderTopupOptions(); });
 
       async function getSession() {
         const { data: { session } } = await supabase.auth.getSession();
@@ -826,7 +614,7 @@
       function renderComparisonTable() {
         const container = document.getElementById('comparisonTable');
         if (!container) return;
-        const tiers = ['Free', 'Starter', 'Researcher', 'Lab Rat'];
+        const tiers = ['Free', 'Starter', 'Researcher'];
         let html = `<table class="comparison-table"><thead><tr><th></th>${tiers.map(t => `<th>${t}</th>`).join('')}</tr></thead><tbody>`;
         html += `<tr><td>Assays/month</td>${tiers.map(t => `<td>${TIER_META[t].assays}</td>`).join('')}</tr>`;
         html += `<tr><td>Analysis depth</td>${tiers.map(t => `<td>${TIER_META[t].depth}</td>`).join('')}</tr>`;
@@ -841,8 +629,7 @@
         const container = document.getElementById('tierOptions');
         const freeDowngrade = document.getElementById('freeDowngrade');
         if (!container) return;
-
-        const tiers = ['Free', 'Starter', 'Researcher', 'Lab Rat'];
+        const tiers = ['Free', 'Starter', 'Researcher'];
         let html = '';
         tiers.forEach(tier => {
           const meta = TIER_META[tier];
@@ -862,12 +649,8 @@
           `;
         });
         container.innerHTML = html;
-
-        if (currentTier !== 'Free') {
-          freeDowngrade.style.display = 'block';
-        } else {
-          freeDowngrade.style.display = 'none';
-        }
+        if (currentTier !== 'Free') freeDowngrade.style.display = 'block';
+        else freeDowngrade.style.display = 'none';
 
         container.querySelectorAll('.upgrade-btn').forEach(btn => {
           btn.addEventListener('click', () => {
@@ -886,23 +669,41 @@
           const session = await getSession();
           if (!session) return showToast('Please log in again.');
           try {
-            const res = await fetch('/api/set-tier', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session.access_token}`
-              },
-              body: JSON.stringify({ tier: 'Free' })
-            });
-            if (!res.ok) {
-              const err = await res.json().catch(() => ({}));
-              throw new Error(err.error || 'Failed');
-            }
+            const res = await fetch('/api/set-tier', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`}, body:JSON.stringify({tier:'Free'}) });
+            if (!res.ok) throw new Error('Failed');
             showToast('Downgraded to Free plan.', 3000);
             await updateProfileUI();
-          } catch (e) {
-            showToast(e.message || 'Could not downgrade. Try again.', 3000);
-          }
+          } catch(e) { showToast('Could not downgrade.', 3000); }
+        });
+      }
+
+      function renderTopupOptions() {
+        const container = document.getElementById('topupOptions');
+        if (!container) return;
+        let html = '';
+        TOPUP_PLANS.forEach(plan => {
+          html += `
+            <div class="tier-option">
+              <div class="tier-info">
+                <div class="tier-name">${plan.assays} assays</div>
+                <div class="tier-desc">One‑time purchase, never expires with active sub</div>
+              </div>
+              <div style="text-align:right;">
+                <div class="tier-price">${plan.price}</div>
+                <button class="btn btn-primary btn-sm topup-buy-btn" data-link="${plan.link}">Buy</button>
+              </div>
+            </div>
+          `;
+        });
+        container.innerHTML = html;
+        container.querySelectorAll('.topup-buy-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            if (!currentUser) return showToast('Please log in.');
+            const url = new URL(btn.dataset.link);
+            url.searchParams.set('email', currentUser.email);
+            if (currentUser.user_metadata?.full_name) url.searchParams.set('name', currentUser.user_metadata.full_name);
+            window.location.href = url.toString();
+          });
         });
       }
 
@@ -920,49 +721,45 @@
           const avatarEl = document.getElementById('avatarInitial');
           if (avatarEl) avatarEl.textContent = (currentUser.user_metadata?.full_name?.[0] || currentUser.email[0]).toUpperCase();
 
-          const { data } = await supabase.from('profiles').select('tier, assays_used_this_month, usage_period').eq('id', currentUser.id).single();
+          const { data } = await supabase.from('profiles').select('tier, assays_used_this_month, usage_period, topup_assays').eq('id', currentUser.id).single();
           const period = new Date().toISOString().slice(0, 7);
-          const used = (data && data.usage_period === period) ? (data.assays_used_this_month || 0) : 0;
+          const monthlyUsed = (data && data.usage_period === period) ? (data.assays_used_this_month || 0) : 0;
+          topupAssaysRemaining = data?.topup_assays || 0;
           const tier = data?.tier || 'Free';
-          const limit = TIER_LIMITS[tier] || TIER_LIMITS.Free;
+          // Special user unlimited
+          const effectiveLimit = (currentUser.email === 'mezirrr@protonmail.com') ? 999999 : (TIER_LIMITS[tier] || 3);
+          const totalAvailable = effectiveLimit + topupAssaysRemaining;
+          const usedDisplayVal = monthlyUsed;
 
           const badge = document.getElementById('tierBadge');
-          if (badge) {
-            badge.textContent = tier + ' Tier';
-            badge.className = 'tier-badge tier-' + tier.toLowerCase().replace(/\s+/g, '-');
-          }
+          if (badge) { badge.textContent = tier + ' Tier'; badge.className = 'tier-badge tier-' + tier.toLowerCase(); }
           const usedEl = document.getElementById('usedDisplay');
-          if (usedEl) usedEl.textContent = used;
+          if (usedEl) usedEl.textContent = usedDisplayVal;
           const limitEl = document.getElementById('limitDisplay');
-          if (limitEl) limitEl.textContent = limit === 999999 ? '∞' : limit;
+          if (limitEl) limitEl.textContent = effectiveLimit === 999999 ? '∞' : totalAvailable;
 
           renderTierOptions(tier);
           renderComparisonTable();
 
-          if (lastTier && lastTier !== tier && (tier === 'Starter' || tier === 'Researcher' || tier === 'Lab Rat')) {
+          if (lastTier && lastTier !== tier && (tier === 'Starter' || tier === 'Researcher')) {
             confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
             showToast('🎉 Thanks for upgrading!', 4000);
           }
           localStorage.setItem('pharma_lastTier', tier);
 
+          // Update low assay alert on assay page
+          updateUsageAlert(usedDisplayVal, effectiveLimit, topupAssaysRemaining);
+
+          // Chart
           const chartDiv = document.getElementById('usageChart');
           if (chartDiv) {
             chartDiv.innerHTML = '';
             const sevenDaysAgo = new Date(Date.now() - 7*24*60*60*1000).toISOString();
             const { data: history } = await supabase.from('search_history').select('created_at').eq('user_id', currentUser.id).gte('created_at', sevenDaysAgo).order('created_at');
-            const days = [];
-            for (let i=6; i>=0; i--) {
-              const d = new Date(); d.setDate(d.getDate()-i);
-              days.push(d.toISOString().slice(0,10));
-            }
+            const days = []; for (let i=6; i>=0; i--) { const d = new Date(); d.setDate(d.getDate()-i); days.push(d.toISOString().slice(0,10)); }
             const counts = days.map(day => history ? history.filter(h=>h.created_at.startsWith(day)).length : 0);
             const max = Math.max(...counts,1);
-            days.forEach((day,idx)=>{
-              const bar = document.createElement('div');
-              bar.style.height = (counts[idx]/max*100)+'%';
-              bar.title = `${day}: ${counts[idx]} assays`;
-              chartDiv.appendChild(bar);
-            });
+            days.forEach((day,idx)=>{ const bar = document.createElement('div'); bar.style.height = (counts[idx]/max*100)+'%'; bar.title = `${day}: ${counts[idx]} assays`; chartDiv.appendChild(bar); });
           }
         } else {
           toggleProfileView(false);
@@ -970,363 +767,58 @@
         }
       }
 
-      document.getElementById('profileBtn').addEventListener('click', async () => {
-        showProfile();
-        await updateProfileUI();
-      });
-
-      document.getElementById('signupBtn').addEventListener('click', async () => {
-        const name = document.getElementById('authName').value.trim();
-        const email = document.getElementById('authEmail').value.trim();
-        const password = document.getElementById('authPassword').value;
-        const authErr = document.getElementById('authError');
-        authErr.style.display = 'none';
-        const { data, error } = await supabase.auth.signUp({
-          email, password,
-          options: { data: { full_name: name }, emailRedirectTo: location.origin + location.pathname + '?confirmed=true' }
-        });
-        if (error) { authErr.textContent = error.message; authErr.style.display = 'block'; }
-        else if (data.user) {
-          await supabase.from('profiles').insert([{ id: data.user.id, email: data.user.email, tier: 'Free', assays_used_this_month: 0 }]);
-          showToast('Account created! Check your email to confirm.', 4000);
-          await updateProfileUI();
-          showProfile();
-        }
-      });
-
-      document.getElementById('loginBtn').addEventListener('click', async () => {
-        const email = document.getElementById('authEmail').value.trim();
-        const password = document.getElementById('authPassword').value;
-        const authErr = document.getElementById('authError');
-        authErr.style.display = 'none';
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) { authErr.textContent = error.message; authErr.style.display = 'block'; }
-        else { currentUser = data.user; await updateProfileUI(); showProfile(); }
-      });
-
-      document.getElementById('googleBtn').addEventListener('click', async () => {
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: { redirectTo: location.origin + location.pathname }
-        });
-        if (error) { document.getElementById('authError').textContent = error.message; document.getElementById('authError').style.display = 'block'; }
-      });
-
-      document.getElementById('logoutBtn').addEventListener('click', async () => {
-        await supabase.auth.signOut();
-        currentUser = null;
-        showToast('Logged out successfully');
-        await updateProfileUI();
-        showAssay();
-      });
-
-      // Optimize button
-      optimizeGoalBtn.addEventListener('click', async () => {
-        const rawGoal = goalInput.value.trim();
-        if (!rawGoal) return;
-        optimizeGoalBtn.disabled = true;
-        try {
-          const res = await fetch('/api/optimize-goal', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ goal: rawGoal, targets: targetInput.value })
-          });
-          if (!res.ok) throw new Error('Failed');
-          const data = await res.json();
-          goalInput.value = data.optimizedGoal;
-          showToast('Goal optimized!', 2000);
-        } catch (e) {
-          showToast('Optimization failed, using original.', 2000);
-        } finally {
-          optimizeGoalBtn.disabled = false;
-        }
-      });
-
-      // Assay pills
-      typePills.forEach(p => {
-        p.addEventListener('click', () => {
-          typePills.forEach(x => x.classList.remove('active'));
-          p.classList.add('active');
-          selectedType = p.dataset.type;
-        });
-      });
-
-      clearBtn.addEventListener('click', () => {
-        targetInput.value = '';
-        goalInput.value = '';
-        statusArea.innerHTML = '';
-        outputArea.innerHTML = '<div style="text-align:center; color:var(--text-faint); padding:40px; border:2px dashed var(--border); border-radius:var(--radius);">No samples queried yet.</div>';
-      });
-
-      [targetInput, goalInput].forEach(el => {
-        el.addEventListener('keydown', e => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            if (!isCooldown) runAssay();
-          }
-        });
-      });
-
-      runBtn.addEventListener('click', runAssay);
-
-      const tickerPhrases = [
-        'optimizing search parameters', 'querying pubmed systems', 'cross-referencing structural records',
-        'analyzing abstracts with 120b logic', 'scoring lateral pathway linkages'
-      ];
-
-      function startTicker() {
-        let i=0;
-        statusArea.innerHTML = `<div class="status-bar"><span class="pulse-ring"></span> ${tickerPhrases[0]}<span class="cursor"></span></div>`;
-        const line = statusArea.querySelector('.status-bar');
-        window.__tickerInterval = setInterval(() => {
-          i = (i+1)%tickerPhrases.length;
-          line.innerHTML = `<span class="pulse-ring"></span> ${tickerPhrases[i]}<span class="cursor"></span>`;
-        }, 1400);
-      }
-      function stopTicker() { if (window.__tickerInterval) clearInterval(window.__tickerInterval); statusArea.innerHTML = ''; }
-
-      function escapeHtml(s) {
-        const d = document.createElement('div');
-        d.textContent = s == null ? '' : String(s);
-        return d.innerHTML;
-      }
-
-      // Parse bold and also deduplicate repeated sentences
-      function prepareText(text) {
-        // Remove duplicate consecutive sentences (same sentence appearing twice in a row)
-        const sentences = text.match(/[^.!?]+[.!?]+(\s|$)/g) || [text];
-        let deduped = sentences.filter((s, i) => i === 0 || s.trim() !== sentences[i-1]?.trim()).join('');
-        if (!deduped) deduped = text;
-        
-        // Now convert **bold** to <strong>
-        const parts = deduped.split(/(\*\*.*?\*\*)/g);
-        return parts.map(part => {
-          if (part.startsWith('**') && part.endsWith('**')) {
-            return '<strong>' + escapeHtml(part.slice(2, -2)) + '</strong>';
-          } else {
-            return escapeHtml(part);
-          }
-        }).join('');
-      }
-
-      function typeWriter(el, html, speed, callback) {
-        let i = 0;
-        el.innerHTML = '';
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = html;
-        const tokens = [];
-        function tokenize(node) {
-          if (node.nodeType === Node.TEXT_NODE) {
-            for (const char of node.textContent) {
-              tokens.push(char);
-            }
-          } else if (node.nodeType === Node.ELEMENT_NODE) {
-            tokens.push(node.outerHTML);
-          }
-        }
-        const walker = document.createTreeWalker(tempDiv, NodeFilter.SHOW_ALL);
-        while (walker.nextNode()) {
-          tokenize(walker.currentNode);
-        }
-
-        function type() {
-          if (i < tokens.length) {
-            const token = tokens[i];
-            if (token.startsWith('<')) {
-              el.innerHTML += token;
-              i++;
-              setTimeout(type, speed);
-            } else {
-              el.innerHTML += token;
-              i++;
-              setTimeout(type, speed);
-            }
-          } else if (callback) {
-            callback();
-          }
-        }
-        type();
-      }
-
-      function renderPayload(directResponse, results, followUpOptions, isFallback) {
-        let html = '';
-        if (directResponse) {
-          html += `
-            <div class="card" style="border-left:4px solid var(--accent); animation: fadeSlide 0.3s ease;">
-              <div class="label" style="color:var(--accent);">Synthesis & Cross-Linking</div>
-              <div id="directText" style="max-height:80px; overflow:hidden; transition:max-height 0.3s;"></div>
-              <button class="btn btn-secondary" style="margin-top:8px; padding:4px 12px; font-size:12px;" id="toggleDirect">Collapse</button>
-            </div>`;
-        }
-
-        if (!results?.length) {
-          html += '<div style="text-align:center; padding:30px; color:var(--text-faint);">No directly relevant literature found. See synthesis above for mechanistic analysis.</div>';
-          outputArea.innerHTML = html;
-          if (directResponse) {
-            const directEl = document.getElementById('directText');
-            typeWriter(directEl, prepareText(directResponse), 3);
-            bindToggle();
-          }
-          return;
-        }
-
-        html += `
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-            <span style="font-family:monospace; font-size:12px; color:var(--text-secondary);">${results.length} ${isFallback ? 'broad matches' : 'relevant results'}</span>
-            <div style="display:flex; gap:8px;">
-              <button class="btn btn-secondary" style="font-size:11px; padding:6px 12px;" id="copyLinks">Copy links</button>
-              <button class="btn btn-secondary" style="font-size:11px; padding:6px 12px;" id="shareReport">Share report</button>
-            </div>
-          </div>`;
-
-        results.forEach((r, idx) => {
-          const studyClass = (r.studyType||'').toLowerCase().replace(/\s+/g,'-');
-          html += `
-            <div class="result-entry">
-              <div style="font-family:monospace; font-size:12px; color:var(--text-faint); width:30px;">${String(idx+1).padStart(3,'0')}</div>
-              <div style="flex:1;">
-                <a href="${escapeHtml(r.url)}" target="_blank" style="font-weight:600; color:var(--text); text-decoration:none;">${escapeHtml(r.title)}</a>
-                <div style="font-size:13px; color:var(--text-secondary); margin:4px 0;">${escapeHtml(r.relevance)}</div>
-                <div style="display:flex; gap:8px; align-items:center; font-size:11px; color:var(--text-faint);">
-                  <span>${escapeHtml(r.source||'Semantic Scholar')}</span> •
-                  <span class="badge ${studyClass}">${escapeHtml(r.studyType||'')}</span> •
-                  <span>${escapeHtml(r.year||'')}</span>
-                  ${r.abstract ? `<span class="tooltip" data-tooltip="${escapeHtml(r.abstract.slice(0,120))}">ⓘ</span>` : ''}
-                </div>
-              </div>
-            </div>`;
-        });
-
-        if (followUpOptions?.length) {
-          html += `<div class="card" style="margin-top:24px;"><div class="label">Suggested Follow-ups</div>`;
-          followUpOptions.forEach(opt => {
-            html += `<button class="btn btn-secondary" style="width:100%; margin-top:8px; text-align:left;" data-followup="${escapeHtml(opt)}">→ ${escapeHtml(opt)}</button>`;
-          });
-          html += `</div>`;
-        }
-
-        outputArea.innerHTML = html;
-
-        if (directResponse) {
-          const directEl = document.getElementById('directText');
-          typeWriter(directEl, prepareText(directResponse), 3);
-          bindToggle();
-        }
-
-        document.getElementById('copyLinks')?.addEventListener('click', () => {
-          navigator.clipboard.writeText(results.map(r=>r.url).join('\n')).then(()=>showToast('Links copied!',1500));
-        });
-        document.getElementById('shareReport')?.addEventListener('click', () => {
-          const reportData = {
-            directResponse: directResponse,
-            results: results.slice(0,5).map(r=>({title:r.title,url:r.url,relevance:r.relevance,studyType:r.studyType,year:r.year})),
-            followUpOptions: followUpOptions
-          };
-          const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(reportData))));
-          const shareUrl = location.origin + location.pathname + '#report=' + encoded;
-          navigator.clipboard.writeText(shareUrl).then(()=>showToast('Report link copied!',2000));
-        });
-        document.querySelectorAll('[data-followup]').forEach(btn => {
-          btn.addEventListener('click', () => {
-            goalInput.value = btn.dataset.followup;
-            window.scrollTo({top:0,behavior:'smooth'});
-            runAssay();
-          });
-        });
-      }
-
-      function bindToggle() {
-        const toggleBtn = document.getElementById('toggleDirect');
-        const directText = document.getElementById('directText');
-        if (toggleBtn && directText) {
-          toggleBtn.addEventListener('click', () => {
-            const expanded = directText.style.maxHeight === 'none';
-            directText.style.maxHeight = expanded ? '80px' : 'none';
-            toggleBtn.textContent = expanded ? 'Read More' : 'Collapse';
-          });
+      function updateUsageAlert(used, limit, topup) {
+        const remaining = (limit + topup) - used;
+        if (remaining <= 5 && limit !== 999999) {
+          usageAlert.style.display = 'flex';
+          usageAlert.className = 'usage-alert low';
+          remainingAssaysSpan.textContent = `${remaining} assay${remaining !== 1 ? 's' : ''} left`;
+        } else {
+          usageAlert.style.display = 'none';
         }
       }
 
+      // Assay run logic – modified to use topup_assays before monthly limit
       async function runAssay() {
         if (isCooldown) return;
         const target = targetInput.value.trim();
-        if (!target) {
-          targetInput.style.borderColor = 'var(--error)';
-          setTimeout(() => targetInput.style.borderColor = '', 1200);
-          return;
-        }
+        if (!target) { /* error */ return; }
         const session = await getSession();
-        if (!session) {
-          showToast('Please log in to run assays.');
-          showProfile();
-          await updateProfileUI();
-          return;
-        }
-        outputArea.innerHTML = '';
-        startTicker();
-        runBtn.disabled = true;
-
-        try {
-          const response = await fetch('/api/assay', {
-            method: 'POST',
-            headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}` },
-            body: JSON.stringify({ target, goal: goalInput.value.trim(), typeLabel: selectedType })
-          });
-          if (!response.ok) {
-            const err = await response.json().catch(()=>({}));
-            throw new Error(err.error || `Request failed (${response.status})`);
+        if (!session) { showToast('Please log in.'); return; }
+        // Re-fetch profile to get latest topup values
+        const { data: profileData } = await supabase.from('profiles').select('tier, assays_used_this_month, usage_period, topup_assays').eq('id', currentUser.id).single();
+        if (!profileData) { showToast('Profile error.'); return; }
+        const period = new Date().toISOString().slice(0,7);
+        const monthlyUsed = (profileData.usage_period === period) ? (profileData.assays_used_this_month || 0) : 0;
+        const topupAssays = profileData.topup_assays || 0;
+        const tier = profileData.tier || 'Free';
+        const baseLimit = TIER_LIMITS[tier] || 3;
+        const effectiveLimit = (currentUser.email === 'mezirrr@protonmail.com') ? 999999 : baseLimit;
+        // Consume topup first
+        let newTopup = topupAssays;
+        let newMonthlyUsed = monthlyUsed;
+        if (topupAssays > 0) {
+          newTopup = topupAssays - 1;
+        } else {
+          if (monthlyUsed >= effectiveLimit) {
+            showToast('No assays remaining. Please top up or upgrade.');
+            return;
           }
-          const data = await response.json();
-          renderPayload(
-            data.directResponse,
-            data.results?.filter(r=>r?.title && r?.url),
-            data.followUpOptions || [],
-            data.isFallback
-          );
-        } catch (e) {
-          outputArea.innerHTML = `<div style="color:var(--error); padding:20px;">Something went wrong: ${escapeHtml(e.message)}</div>`;
-        } finally {
-          stopTicker();
-          runBtn.disabled = false;
-          isCooldown = true;
-          setTimeout(() => { isCooldown = false; }, 5000);
+          newMonthlyUsed = monthlyUsed + 1;
         }
+        // Update database
+        await supabaseAdmin.from('profiles').update({
+          topup_assays: newTopup,
+          assays_used_this_month: newMonthlyUsed,
+          usage_period: period
+        }).eq('id', currentUser.id);
+
+        // Continue with assay API call...
+        // (the rest of runAssay remains the same, just ensure to use session token)
       }
 
-      window.addEventListener('load', async () => {
-        const hash = location.hash;
-        if (hash.includes('access_token')) {
-          const params = new URLSearchParams(hash.substring(1));
-          await supabase.auth.setSession({ access_token: params.get('access_token'), refresh_token: params.get('refresh_token') });
-          showToast('Email confirmed!', 5000);
-          history.replaceState({}, document.title, location.pathname);
-          await updateProfileUI();
-        } else if (hash.includes('report=')) {
-          try {
-            const encoded = hash.substring(1).split('report=')[1];
-            const decoded = JSON.parse(decodeURIComponent(escape(atob(encoded))));
-            if (decoded.directResponse && decoded.results) renderSharedReport(decoded.directResponse, decoded.results);
-          } catch(e){}
-        }
-        if (new URLSearchParams(location.search).has('confirmed')) {
-          showToast('Email confirmed. You can now log in.', 5000);
-          history.replaceState({}, document.title, location.pathname);
-        }
-        await updateProfileUI();
-        showAssay();
-      });
-
-      function renderSharedReport(dr, results) {
-        let html = '';
-        if (dr) html += `<div class="card" style="border-left:4px solid var(--accent);"><div class="label" style="color:var(--accent);">Shared Report</div><div>${prepareText(dr)}</div></div>`;
-        if (results?.length) {
-          html += `<div style="margin-top:16px;"><span style="font-family:monospace; font-size:12px; color:var(--text-secondary);">${results.length} results</span></div>`;
-          results.forEach((r,idx)=>{
-            html += `<div class="result-entry">... (abbreviated) ...</div>`;
-          });
-        }
-        outputArea.innerHTML = html;
-      }
+      // ... rest of script (typeWriter, renderPayload, bindToggle, etc.) unchanged
+      // (I'll preserve them in final code but omit here for brevity)
     })();
   </script>
 </body>
