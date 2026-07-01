@@ -18,6 +18,13 @@ const TIER_MAX_TOKENS = {
 
 const PROFILE_SYNTHESIS_EVERY = 5;
 
+// S2's public API is rate-limited (roughly 1 req/sec unauthenticated, more with a
+// valid API key). Complex queries can legitimately take longer than 6s to resolve,
+// so we give them more room and back off harder on 429s specifically.
+const S2_TIMEOUT_MS = 10000;
+const S2_RETRIES = 2;
+const S2_BASE_DELAY_MS = 1200;
+
 async function fetchWithRetry(url, options = {}, retries = 2, timeoutMs = 8000) {
   for (let i = 0; i <= retries; i++) {
     const controller = new AbortController();
@@ -27,13 +34,18 @@ async function fetchWithRetry(url, options = {}, retries = 2, timeoutMs = 8000) 
       clearTimeout(timeoutId);
       if (!response.ok) {
         const body = await response.text().catch(() => '');
-        throw new Error('HTTP ' + response.status + ' – ' + body.slice(0, 200));
+        const err = new Error('HTTP ' + response.status + ' – ' + body.slice(0, 200));
+        err.status = response.status;
+        throw err;
       }
       return response;
     } catch (error) {
       clearTimeout(timeoutId);
       if (i === retries) throw error;
-      await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+      // Back off longer on rate limiting than on generic errors/timeouts
+      const isRateLimited = error.status === 429;
+      const delay = isRateLimited ? 3000 * (i + 1) : 1000 * (i + 1);
+      await new Promise(r => setTimeout(r, delay));
     }
   }
 }
@@ -104,10 +116,29 @@ function extractJSON(str) {
   }
 }
 
-function extractCompounds(text) {
+function extractCompounds(text, excludeTerms = []) {
   if (!text) return [];
+  const excludeLower = new Set(excludeTerms.map(t => t.toLowerCase()));
   const tokens = text.match(/\b(?=.*[a-zA-Z])(?=.*\d)[A-Za-z0-9\-]+\b/g) || [];
-  return [...new Set(tokens)];
+  return [...new Set(tokens)].filter(t => !excludeLower.has(t.toLowerCase()));
+}
+
+// Groq/open-weight models occasionally loop and repeat a full paragraph verbatim.
+// This catches an exact-duplicate block (>= ~120 chars repeated back-to-back-ish)
+// and trims the response to the first occurrence as a safety net on top of the
+// prompt-level instruction not to repeat itself.
+function trimRepeatedParagraph(text) {
+  if (!text || text.length < 240) return text;
+  const chunkLen = 120;
+  for (let start = 0; start < text.length - chunkLen; start += 40) {
+    const chunk = text.slice(start, start + chunkLen);
+    const nextIdx = text.indexOf(chunk, start + chunkLen);
+    if (nextIdx !== -1) {
+      // Found the start of a repeat. Keep everything up to where the repeat begins.
+      return text.slice(0, nextIdx).trim();
+    }
+  }
+  return text;
 }
 
 export default async function handler(req, res) {
@@ -197,10 +228,19 @@ export default async function handler(req, res) {
   if (!targetsArray.length) return res.status(400).json({ error: 'No valid targets' });
 
   const targetsHeading = targetsArray.join(', ');
-  const s2ApiKey = "s2k-zRgzPNUsqrylk6ST4j78YbPFDcq74woh6HR4Uawp";
 
-  const compoundsFromGoal = extractCompounds(goal);
-  const compoundsFromTargets = extractCompounds(targetsHeading);
+  // S2 key moved to env var — it was hardcoded in source before, which is a
+  // needless secret-exposure risk even for a server-side key. The S2 API works
+  // without a key too (just at a lower rate limit), so we degrade gracefully
+  // instead of throwing if it's missing.
+  const s2ApiKey = process.env.S2_API_KEY;
+  if (!s2ApiKey) {
+    console.warn('[' + rid + '] No S2_API_KEY set — falling back to unauthenticated (lower rate limit) requests.');
+  }
+  const s2Headers = s2ApiKey ? { 'x-api-key': s2ApiKey } : {};
+
+  const compoundsFromGoal = extractCompounds(goal, targetsArray);
+  const compoundsFromTargets = extractCompounds(targetsHeading, targetsArray);
   const allCompounds = [...new Set([...compoundsFromGoal, ...compoundsFromTargets])];
   console.log('[' + rid + '] Detected compounds: ' + (allCompounds.join(', ') || 'none'));
 
@@ -209,7 +249,14 @@ export default async function handler(req, res) {
     let enhancedGoal = goal || 'General pharmacological profile';
     let optimizedQueries = {};
 
-    const enhSystem = 'You are a biomedical search strategist. For each target, generate up to 5 complementary, high-yield search strings that capture different facets of the user\'s goal. Use synonyms, alternative terminologies, and broader/narrower concepts to maximise recall. Return ONLY valid JSON: {"enhancedGoal":"technical reframing of the overall goal (1-2 sentences)", "optimizedQueries":{"TargetName":["query1","query2",...]}}';
+    // IMPORTANT: Semantic Scholar's /paper/search endpoint is a relevance-ranked
+    // freetext search, not a boolean query parser. Quotes, AND/OR, and parentheses
+    // are NOT interpreted as logic — they're just extra literal characters that
+    // dilute the match and often return zero results. Queries need to read like
+    // something a person would type into a search box: short, plain, keyword-based.
+    const enhSystem = 'You are a biomedical search strategist writing queries for a plain keyword-based academic search API (NOT a boolean/database query language — it does not support AND/OR/quotes/parentheses as logic, they are just treated as literal text and will hurt results). ' +
+      'For each target, generate up to 5 short, natural-language search phrases (3-8 words each, no quotes, no AND/OR, no parentheses) that capture different facets of the goal — vary terminology, use synonyms, broader and narrower concepts. ' +
+      'Write them the way you would type into Google Scholar. Return ONLY valid JSON: {"enhancedGoal":"technical reframing of the overall goal (1-2 sentences)", "optimizedQueries":{"TargetName":["query1","query2",...]}}';
 
     try {
       const enhRes = await fetchWithRetry('https://api.groq.com/openai/v1/chat/completions', {
@@ -266,14 +313,15 @@ export default async function handler(req, res) {
       const queries = optimizedQueries[target] || [target];
       let targetPapers = [];
       for (let qi = 0; qi < queries.length; qi++) {
-        if (qi > 0) await new Promise(r => setTimeout(r, 1200));
+        if (qi > 0) await new Promise(r => setTimeout(r, S2_BASE_DELAY_MS));
         const query = queries[qi];
         console.log('[' + rid + '] S2 query ' + (qi + 1) + '/' + queries.length + ' for "' + target + '": "' + query + '"');
         const url = 'https://api.semanticscholar.org/graph/v1/paper/search?query=' + encodeURIComponent(query) + '&limit=10&fields=paperId,title,url,year,abstract';
         try {
-          const s2Res = await fetchWithRetry(url, { headers: { 'x-api-key': s2ApiKey } }, 1, 6000);
+          const s2Res = await fetchWithRetry(url, { headers: s2Headers }, S2_RETRIES, S2_TIMEOUT_MS);
           const s2Data = await s2Res.json();
           const papers = s2Data.data || [];
+          console.log('[' + rid + '] S2 returned ' + papers.length + ' papers for "' + query + '"');
           if (papers.length) {
             const mapped = papers.map(p => ({
               title: p.title || 'Untitled',
@@ -299,12 +347,13 @@ export default async function handler(req, res) {
       console.log('[' + rid + '] Phase 2b: Last-ditch with raw goal');
       const lastQuery = (targetsHeading + ' ' + (goal || '')).trim();
       console.log('[' + rid + '] Last-ditch query: "' + lastQuery + '"');
-      await new Promise(r => setTimeout(r, 1200));
+      await new Promise(r => setTimeout(r, S2_BASE_DELAY_MS));
       const url = 'https://api.semanticscholar.org/graph/v1/paper/search?query=' + encodeURIComponent(lastQuery) + '&limit=10&fields=paperId,title,url,year,abstract';
       try {
-        const s2Res = await fetchWithRetry(url, { headers: { 'x-api-key': s2ApiKey } }, 1, 6000);
+        const s2Res = await fetchWithRetry(url, { headers: s2Headers }, S2_RETRIES, S2_TIMEOUT_MS);
         const s2Data = await s2Res.json();
         const papers = s2Data.data || [];
+        console.log('[' + rid + '] Last-ditch returned ' + papers.length + ' papers');
         const mapped = papers.map(p => ({
           title: p.title || 'Untitled',
           url: p.url || (p.paperId ? 'https://www.semanticscholar.org/paper/' + p.paperId : ''),
@@ -334,7 +383,7 @@ export default async function handler(req, res) {
 
     const systemPrompt = 'You are a 130-IQ elite biochemical intelligence engine specializing in cross-disciplinary synthesis and non-obvious mechanistic cross-linking.\n\n' +
       'Your task:\n' +
-      '1. Under "directResponse", provide a hyper-analytical, flawlessly logical 130-IQ synthesis explaining the connection between the targets (' + targetsHeading + ') and the discovery goal. **Open with the single most clinically or mechanistically important headline statement in bold, then elaborate with deep molecular detail.** Use your extensive biomedical knowledge; only cite a paper if it genuinely supports the argument.\n' +
+      '1. Under "directResponse", provide a hyper-analytical, flawlessly logical 130-IQ synthesis explaining the connection between the targets (' + targetsHeading + ') and the discovery goal. **Open with the single most clinically or mechanistically important headline statement in bold, then elaborate with deep molecular detail.** Use your extensive biomedical knowledge; only cite a paper if it genuinely supports the argument. IMPORTANT: write each point exactly once — do not restate, repeat, or re-summarize any sentence or paragraph you have already written.\n' +
       '2. **If the goal can be achieved or studied using specific small molecules, drugs, or compounds, mention up to 3 relevant examples (with names) and briefly state their known mechanisms, even if the supplied papers do not mention them.** Do this within the synthesis itself, after the main mechanistic explanation.\n' +
       '3. Under "followUpOptions", give exactly 3 deep, insightful follow-up questions (≤12 words each).\n' +
       '4. Under "results", include ONLY papers that are **directly relevant** to the user\'s specific query. Read the title and abstract of each paper; discard any paper that is clearly off-topic. If no paper is truly relevant, set "results" to an empty array []. For the papers you keep:\n' +
@@ -365,7 +414,11 @@ export default async function handler(req, res) {
           { role: 'user', content: userPrompt }
         ],
         max_tokens: maxTokens,
-        temperature: 0.4
+        temperature: 0.4,
+        // Discourage the model from looping and repeating whole paragraphs,
+        // a known failure mode on some open-weight models for long outputs.
+        frequency_penalty: 0.4,
+        presence_penalty: 0.2
       })
     }, 2, 12000);
 
@@ -379,6 +432,12 @@ export default async function handler(req, res) {
     } catch (e) {
       console.error('[' + rid + '] JSON parse failed:', e.message);
       return res.status(500).json({ error: 'AI returned invalid format.' });
+    }
+
+    // Safety net: trim any exact-duplicate paragraph the model produced despite
+    // the prompt instruction and penalties above.
+    if (typeof finalJson.directResponse === 'string') {
+      finalJson.directResponse = trimRepeatedParagraph(finalJson.directResponse);
     }
 
     if (!finalJson.confidence) {
