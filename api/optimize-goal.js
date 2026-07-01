@@ -22,8 +22,8 @@ export default async function handler(req, res) {
             content: `Targets: ${targets || 'unspecified'}\nRaw Goal: ${goal}`
           }
         ],
-        max_tokens: 500,
-        temperature: 0.4
+        max_tokens: 1000,
+        temperature: 0.3
       })
     });
 
