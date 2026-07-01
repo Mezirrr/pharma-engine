@@ -6,7 +6,7 @@ const TIER_LIMITS = {
   Free: 3,
   Starter: 50,
   Researcher: 200,
-  'Lab Rat': 999999
+  'Lab Rat': 999999   // effectively unlimited
 };
 
 const TIER_MAX_TOKENS = {
@@ -17,7 +17,6 @@ const TIER_MAX_TOKENS = {
 };
 
 const PROFILE_SYNTHESIS_EVERY = 5;
-
 const S2_TIMEOUT_MS = 10000;
 const S2_RETRIES = 2;
 const S2_BASE_DELAY_MS = 1200;
@@ -79,7 +78,7 @@ async function maybeUpdateResearcherProfile(userId, newSearchCount) {
       })
     }, 1, 6000);
     const data = await res.json();
-    const synth = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content ? data.choices[0].message.content.trim() : null;
+    const synth = (data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) ? data.choices[0].message.content.trim() : null;
     if (synth) {
       await supabaseAdmin.from('profiles').update({ researcher_profile: synth }).eq('id', userId);
     }
@@ -91,40 +90,34 @@ async function maybeUpdateResearcherProfile(userId, newSearchCount) {
 function repairJSON(str) {
   let cleaned = str.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
   cleaned = cleaned.replace(/[\s\r\n]+$/g, '');
-  
   const first = cleaned.indexOf('{'), last = cleaned.lastIndexOf('}');
   if (first === -1 || last === -1) throw new Error('No braces found');
   let json = cleaned.slice(first, last + 1);
-  
-  // Pre-parse fixes for common LLM mistakes:
-  
-  // 0. Strip markdown formatting from string values (Llama loves to add ** ** for bold)
-  //    This removes **text** and __text__ and *text* patterns inside quoted strings
-  //    Regex: find opening quote, then replace markdown decorators inside, then closing quote
+
+  // Fix 1: wrap bare **bold** or __bold__ values in quotes (e.g., "key": **value** → "key": "**value**")
+  json = json.replace(/:\s*\*\*([^*]+)\*\*/g, ':"**$1**"');
+  json = json.replace(/:\s*__([^_]+)__/g, ':"__$1__"');
+
+  // Fix 2: remove markdown inside quoted strings (the existing fix)
   json = json.replace(/"([^"]*)"/g, (match) => {
-    let inner = match.slice(1, -1); // Remove surrounding quotes
-    // Remove markdown bold/italic/underline decorators
-    inner = inner.replace(/\*\*(.+?)\*\*/g, '$1');  // **bold** → bold
-    inner = inner.replace(/__(.+?)__/g, '$1');       // __bold__ → bold
-    inner = inner.replace(/\*(.+?)\*/g, '$1');       // *italic* → italic
-    inner = inner.replace(/_(.+?)_/g, '$1');         // _italic_ → italic
+    let inner = match.slice(1, -1);
+    inner = inner.replace(/\*\*(.+?)\*\*/g, '$1');
+    inner = inner.replace(/__(.+?)__/g, '$1');
+    inner = inner.replace(/\*(.+?)\*/g, '$1');
+    inner = inner.replace(/_(.+?)_/g, '$1');
     return '"' + inner + '"';
   });
-  
-  // 1. Unquoted keys: `{key: value}` → `{"key": value}`
-  //    This regex looks for: (opening brace or comma)(optional whitespace)(identifier)(optional whitespace)(colon)
+
+  // Fix 3: unquoted keys → "key":
   json = json.replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":');
-  
-  // 2. Trailing commas before ] or }
+
+  // Trailing commas
   json = json.replace(/,\s*([}\]])/g, '$1');
-  
-  // 3. Single-quoted strings to double-quoted (simple heuristic: preserve if nested quotes)
+
+  // Single quotes to double quotes (if safe)
   json = json.replace(/'([^'\\]|\\.)*?'/g, (match) => {
     const inner = match.slice(1, -1);
-    // Only convert if no double-quotes inside
-    if (!inner.includes('"')) {
-      return '"' + inner.replace(/\\'/g, "'") + '"';
-    }
+    if (!inner.includes('"')) return '"' + inner.replace(/\\'/g, "'") + '"';
     return match;
   });
 
@@ -142,11 +135,9 @@ function repairJSON(str) {
       const opener = stack.pop();
       fixed += opener === '[' ? ']' : '}';
     }
-    
     try {
       return JSON.parse(fixed);
     } catch (e2) {
-      // Debug: show where the parse error is
       const posMatch = e.message.match(/position (\d+)/);
       const pos = posMatch ? parseInt(posMatch[1]) : 0;
       const context = json.slice(Math.max(0, pos - 80), Math.min(json.length, pos + 80));
@@ -173,28 +164,21 @@ function trimRepeatedParagraph(text) {
   for (let start = 0; start < text.length - chunkLen; start += 40) {
     const chunk = text.slice(start, start + chunkLen);
     const nextIdx = text.indexOf(chunk, start + chunkLen);
-    if (nextIdx !== -1) {
-      return text.slice(0, nextIdx).trim();
-    }
+    if (nextIdx !== -1) return text.slice(0, nextIdx).trim();
   }
   return text;
 }
 
-// ========== PMC EUROPE PARALLEL SOURCE ==========
-// PMC Europe (PubMed Central) is free, no key needed, fast, and complements S2 well.
-// Their API: https://www.ebi.ac.uk/europepmc/webservices/rest/search
 async function fetchPMCEuropePapers(query, limit = 10) {
   const url = 'https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=' +
     encodeURIComponent(query) + '&format=json&pageSize=' + limit + '&cursorMark=*';
-  
   try {
     const res = await fetchWithRetry(url, {}, 1, 8000);
     const data = await res.json();
-    const results = data.resultList && data.resultList.result ? data.resultList.result : [];
-    
+    const results = (data.resultList && data.resultList.result) ? data.resultList.result : [];
     return results.map(r => ({
       title: r.title || 'Untitled',
-      url: r.pmcid ? ('https://www.ncbi.nlm.nih.gov/pmc/articles/PMC' + r.pmcid) : 
+      url: r.pmcid ? ('https://www.ncbi.nlm.nih.gov/pmc/articles/PMC' + r.pmcid) :
            (r.doi ? ('https://doi.org/' + r.doi) : ''),
       year: r.pubYear || 'Unknown',
       abstract: (r.abstractText ? r.abstractText.substring(0, 400) + '...' : ''),
@@ -346,6 +330,7 @@ export default async function handler(req, res) {
       }
     }
 
+    // Ensure each target has at least one query, and force compound-specific queries
     for (const t of targetsArray) {
       if (!optimizedQueries[t]) optimizedQueries[t] = [];
       const rawGoalQuery = (t + ' ' + (goal || '')).trim();
@@ -362,17 +347,16 @@ export default async function handler(req, res) {
 
     // ================== PHASE 2: PARALLEL SOURCES (S2 + PMC Europe) ==================
     let allPapers = [], fallbackTriggered = false;
-    
-    // Run S2 and PMC Europe in parallel for the first 1-2 queries per target
+
     for (const target of targetsArray) {
       const queries = optimizedQueries[target] || [target];
       let targetPapers = [];
-      
+
       for (let qi = 0; qi < Math.min(queries.length, 3); qi++) {
         if (qi > 0) await new Promise(r => setTimeout(r, S2_BASE_DELAY_MS));
         const query = queries[qi];
         console.log('[' + rid + '] Query ' + (qi + 1) + '/' + queries.length + ' for "' + target + '": "' + query + '"');
-        
+
         // Fetch from both sources in parallel
         const s2Promise = (async () => {
           try {
@@ -393,15 +377,15 @@ export default async function handler(req, res) {
             return [];
           }
         })();
-        
+
         const pmcPromise = fetchPMCEuropePapers(query, 10);
-        
+
         const [s2Papers, pmcPapers] = await Promise.all([s2Promise, pmcPromise]);
         targetPapers.push(...s2Papers, ...pmcPapers);
-        
+
         if (targetPapers.length >= 12) break;
       }
-      
+
       if (targetPapers.length === 0) {
         fallbackTriggered = true;
       }
@@ -414,7 +398,7 @@ export default async function handler(req, res) {
       const lastQuery = (targetsHeading + ' ' + (goal || '')).trim();
       console.log('[' + rid + '] Last-ditch query: "' + lastQuery + '"');
       await new Promise(r => setTimeout(r, S2_BASE_DELAY_MS));
-      
+
       const s2Promise = (async () => {
         try {
           const url = 'https://api.semanticscholar.org/graph/v1/paper/search?query=' + encodeURIComponent(lastQuery) + '&limit=10&fields=paperId,title,url,year,abstract';
@@ -434,7 +418,7 @@ export default async function handler(req, res) {
           return [];
         }
       })();
-      
+
       const pmcLastditch = fetchPMCEuropePapers(lastQuery, 10);
       const [s2Papers, pmcPapers] = await Promise.all([s2Promise, pmcLastditch]);
       allPapers.push(...s2Papers, ...pmcPapers);
@@ -455,9 +439,10 @@ export default async function handler(req, res) {
       : '';
 
     const systemPrompt = 'You are a 130-IQ elite biochemical intelligence engine specializing in cross-disciplinary synthesis, non-obvious mechanistic cross-linking, and exploratory hypothesis generation.\n\n' +
+      'IMPORTANT: Return ONLY valid JSON. **Never use markdown inside JSON values.** Do NOT wrap any text in **bold** or other formatting; use plain text only.\n\n' +
       'Your core mission: uncover unexpected molecular connections, off-target effects, and creative research directions — even if the supplied papers don\'t directly name the user\'s goal.\n\n' +
       'Your task:\n' +
-      '1. Under "directResponse", provide a hyper-creative, mechanistically rigorous synthesis that connects the targets (' + targetsHeading + ') to the goal. **Open with the most scientifically bold or clinically surprising headline statement in bold, then elaborate with deep molecular detail.** Synthesize across disciplines: pathway biology, structural biology, medicinal chemistry, cell biology, phenotypic outcomes. Use your extensive knowledge to propose novel mechanisms and non-obvious cross-talk — the goal may be achievable through unexpected molecular angles. IMPORTANT: write each point exactly once — do not restate, repeat, or re-summarize any sentence or paragraph.\n' +
+      '1. Under "directResponse", provide a hyper-creative, mechanistically rigorous synthesis that connects the targets (' + targetsHeading + ') to the goal. Write the most scientifically bold or clinically surprising headline sentence first (as plain text, no asterisks), then elaborate with deep molecular detail. Synthesize across disciplines: pathway biology, structural biology, medicinal chemistry, cell biology, phenotypic outcomes. Use your extensive knowledge to propose novel mechanisms and non-obvious cross-talk. IMPORTANT: write each point exactly once — do not restate, repeat, or re-summarize any sentence or paragraph.\n' +
       '2. **Mention up to 3 relevant small molecules, drugs, or compounds (with names) and their known mechanisms.** These can be: (a) direct inhibitors/agonists of the target, (b) compounds that produce the desired phenotypic outcome via adjacent pathways, or (c) off-label/unexpected uses that illuminate the mechanism. Even if the papers don\'t mention them, use your knowledge.\n' +
       '3. Under "followUpOptions", give exactly 3 deep, insightful follow-up questions that would test or extend the hypothesis (≤12 words each). These should probe unexpected angles.\n' +
       '4. Under "results", include papers that illuminate the synthesis — not just directly-on-target work. Include: (a) papers on the target itself, (b) papers on pathway components, (c) papers on desired outcomes or phenotypes, (d) papers on unexpected off-target effects or cross-reactivity that might be mechanistically relevant. **If a paper sheds light on an adjacent mechanism, pathway interaction, or phenotypic pathway even if the title doesn\'t match perfectly, include it and explain how it\'s relevant.** If no papers are found, set "results" to an empty array []. For each paper you keep:\n' +
@@ -482,13 +467,13 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + process.env.GROQ_API_KEY },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'openai/gpt-oss-120b',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
         max_tokens: maxTokens,
-        temperature: 0.6,
+        temperature: 0.4,
         frequency_penalty: 0.2,
         presence_penalty: 0.1
       })
