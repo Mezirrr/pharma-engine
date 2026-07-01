@@ -63,7 +63,7 @@ async function maybeUpdateResearcherProfile(userId, newSearchCount) {
     .map((s, i) => (i + 1) + '. Target(s): ' + s.target_searched + ' | Goal: ' + (s.goal_input || 'n/a'))
     .join('\n');
 
-  const system = 'You write extremely terse researcher‑focus summaries. Given recent search queries, output ONLY a single plain‑text synthesis, ≤50 words. No preamble, no JSON.';
+  const system = 'You write extremely terse researcher‑focus summaries. Given recent search queries, output ONLY a single plain‑text synthesis, ≤100 words. No preamble, no JSON.';
 
   try {
     const res = await fetchWithRetry('https://api.groq.com/openai/v1/chat/completions', {
