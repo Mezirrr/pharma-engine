@@ -498,7 +498,7 @@
 
     .comparison-table {
       margin-top: 20px;
-      border-collapse: collapse;
+      border-collapse: Read More;
       width: 100%;
       font-size: 13px;
     }
@@ -1155,7 +1155,7 @@
             <div class="card" style="border-left:4px solid var(--accent); animation: fadeSlide 0.3s ease;">
               <div class="label" style="color:var(--accent);">Synthesis & Cross-Linking</div>
               <div id="directText" style="max-height:80px; overflow:hidden; transition:max-height 0.3s;"></div>
-              <button class="btn btn-secondary" style="margin-top:8px; padding:4px 12px; font-size:12px;" id="toggleDirect">Read More</button>
+              <button class="btn btn-secondary" style="margin-top:8px; padding:4px 12px; font-size:12px;" id="toggleDirect">Collapse</button>
             </div>`;
         }
 
@@ -1242,7 +1242,7 @@
           toggleBtn.addEventListener('click', () => {
             const expanded = directText.style.maxHeight === 'none';
             directText.style.maxHeight = expanded ? '80px' : 'none';
-            toggleBtn.textContent = expanded ? 'Collapse' : 'Read More';
+            toggleBtn.textContent = expanded ? 'Read More' : 'Collapse';
           });
         }
       }
